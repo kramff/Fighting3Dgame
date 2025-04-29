@@ -107,9 +107,6 @@ let safeGeometry;
 let safeMaterial;
 let safeMaterialHighlight;
 
-let lampMaterial;
-let lampMaterialHighlight;
-
 let hitEffectGeometry;
 let hitEffectMaterial;
 
@@ -304,7 +301,6 @@ let compareGameStates = (gs1, gs2) => {
 			if (object.yMousePosition !== matchingObject.yMousePosition) {comparisons.push(`player.yMousePosition diff ${object.yMousePosition} !== ${matchingObject.yMousePosition}`);}
 			if (object.interactPressed !== matchingObject.interactPressed) {comparisons.push(`player.interactPressed diff ${object.interactPressed} !== ${matchingObject.interactPressed}`);}
 			if (object.reloadPressed !== matchingObject.reloadPressed) {comparisons.push(`player.reloadPressed diff ${object.reloadPressed} !== ${matchingObject.reloadPressed}`);}
-			if (object.flashlightPressed !== matchingObject.flashlightPressed) {comparisons.push(`player.flashlightPressed diff ${object.flashlightPressed} !== ${matchingObject.flashlightPressed}`);}
 			if (object.runPressed !== matchingObject.runPressed) {comparisons.push(`player.runPressed diff ${object.runPressed} !== ${matchingObject.runPressed}`);}
 			if (object.firePressed !== matchingObject.firePressed) {comparisons.push(`player.firePressed diff ${object.firePressed} !== ${matchingObject.firePressed}`);}
 			if (object.readyPressed !== matchingObject.readyPressed) {comparisons.push(`player.readyPressed diff ${object.readyPressed} !== ${matchingObject.readyPressed}`);}
@@ -448,7 +444,6 @@ let createPlayer = (gs, name, id, team) => {
 		leftPressed: false,
 		interactPressed: false,
 		reloadPressed: false,
-		flashlightPressed: false,
 		runPressed: false,
 		firePressed: false,
 		readyPressed: false,
@@ -462,13 +457,10 @@ let createPlayer = (gs, name, id, team) => {
 		// Released actions
 		interactReleased: false,
 		reloadReleased: false,
-		flashlightReleased: false,
 		runReleased: false,
 		fireReleased: false,
 		readyReleased: false,
 		specialReleased: false,
-		// Flashlight
-		flashlightOn: true,
 		// Graphics
 		connectedMesh: undefined,
 		connectedOverlayObjects: {},
@@ -526,7 +518,6 @@ let resetPlayerObject = (playerObject) => {
 	playerObject.leftPressed = false;
 	playerObject.interactPressed = false;
 	playerObject.reloadPressed = false;
-	playerObject.flashlightPressed = false;
 	playerObject.runPressed = false;
 	playerObject.firePressed = false;
 	playerObject.readyPressed = false;
@@ -540,12 +531,9 @@ let resetPlayerObject = (playerObject) => {
 	// Released actions
 	playerObject.interactReleased = false;
 	playerObject.reloadReleased = false;
-	playerObject.flashlightReleased = false;
 	playerObject.runReleased = false;
 	playerObject.fireReleased = false;
 	playerObject.readyReleased = false;
-	// Flashlight
-	playerObject.flashlightOn = true;
 	// Defeated
 	playerObject.defeated = false;
 }
@@ -564,24 +552,6 @@ let createPlayerMesh = (playerObject) => {
 	playerMesh.castShadow = true;
 	playerMesh.receiveShadow = true;
 	scene.add(playerMesh);
-	// Point light
-	let playerPointLight = new THREE.PointLight(0xffffff, 0.1, 5);
-	playerPointLight.castShadow = true;
-	scene.add(playerPointLight);
-	playerPointLight.parent = playerMesh;
-	playerPointLight.position.set(1.4, 0, 1.3);
-	playerMesh.pointLight = playerPointLight;
-	// Spot light
-	let playerSpotLight = new THREE.SpotLight(0xffffff, 1, 10, 0.5, 0.5, 2);
-	playerSpotLight.castShadow = true;
-	scene.add(playerSpotLight);
-	playerSpotLight.parent = playerMesh;
-	playerSpotLight.position.set(0.5, 0, 0.3);
-	playerMesh.spotLight = playerSpotLight;
-	// Spot light's target
-	scene.add(playerSpotLight.target);
-	playerSpotLight.target.parent = playerMesh;
-	playerSpotLight.target.position.set(0.9, 0, 0.25);
 	// Add player's mesh to mesh list
 	playerMeshList.push(playerMesh);
 	return playerMesh;
@@ -606,9 +576,6 @@ let createAppliance = (gs, applianceType, xPosition, yPosition) => {
 		connectedOverlayObjects: {},
 		toBeRemoved: false,
 	};
-    if (applianceType === "lamp") {
-        newAppliance.lightOn = true;
-    }
 	gs.applianceList.push(newAppliance);
 	return newAppliance;
 }
@@ -630,18 +597,6 @@ let createApplianceMesh = (applianceObject) => {
 		applianceObject.regularMat = supplyMaterial;
 		applianceObject.highlightMat = supplyMaterialHighlight;
 	}
-	else if (applianceObject.subType === "lamp") {
-		applianceMesh = new THREE.Mesh(sphereGeometry, lampMaterial);
-		applianceObject.regularMat = lampMaterial;
-		applianceObject.highlightMat = lampMaterialHighlight;
-		// Create light for the lamp
-		let appliancePointLight = new THREE.PointLight(0xffffff, 0.4, 8);
-		appliancePointLight.castShadow = true;
-		scene.add(appliancePointLight);
-		appliancePointLight.parent = applianceMesh;
-		appliancePointLight.position.set(0, 0, 0);
-		applianceMesh.pointLight = appliancePointLight;
-	}
 	else if (applianceObject.subType === "safe") {
 		applianceMesh = new THREE.Mesh(safeGeometry, safeMaterial);
 		//applianceMesh.scale.multiplyScalar(0.5);
@@ -652,15 +607,8 @@ let createApplianceMesh = (applianceObject) => {
 		console.log("appliance type missing: " + applianceObject.subType);
 		applianceMesh = new THREE.Mesh(cubeGeometry, tableMaterial);
 	}
-	// Lamps don't cast or receive shadows
-	if (applianceObject.subType === "lamp") {
-		applianceMesh.castShadow = false;
-		applianceMesh.receiveShadow = false;
-	}
-	else {
-		applianceMesh.castShadow = true;
-		applianceMesh.receiveShadow = true;
-	}
+	applianceMesh.castShadow = true;
+	applianceMesh.receiveShadow = true;
 	scene.add(applianceMesh);
 	applianceMeshList.push(applianceMesh);
 	return applianceMesh;
@@ -1214,8 +1162,6 @@ let init = () => {
 	powderMaterial = new THREE.MeshToonMaterial({color: 0x60a080});
 	//rockMaterial = new THREE.MeshToonMaterial({color: 0x994433});
 	hitEffectMaterial = new THREE.MeshToonMaterial({color: 0xffffff});
-	lampMaterial = new THREE.MeshToonMaterial({color: 0xeeeeaa});
-	lampMaterialHighlight = new THREE.MeshToonMaterial({color: 0xeeeecc});
 	safeMaterial = new THREE.MeshToonMaterial({color: 0x444444});
 	safeMaterialHighlight = new THREE.MeshToonMaterial({color: 0x555555});
 	enemy1Material = new THREE.MeshToonMaterial({color: 0x707070});
@@ -1244,10 +1190,7 @@ let init = () => {
 	scene.add(floorMesh);
 
 	// Lights
-	//sceneLight = new THREE.PointLight(0xffffff, 0.2, 14);
-	//sceneLight.position.set(4, 4, 4);
-	//scene.add(sceneLight);
-	sceneLight2 = new THREE.AmbientLight(0xffffff, 0.005);
+	sceneLight2 = new THREE.AmbientLight(0xffffff, 0.1);
 	scene.add(sceneLight2);
 
 	addEventListener("keydown", keyDownFunction);
@@ -1264,19 +1207,19 @@ let levelLayout = [
 	".####...................",
 	"#1..M#.......##.........",
 	"#...R##.....#..#........",
-	"#*...TT######..#........",
+	"#....TT######..#........",
 	"#...............#.......",
 	"#..........TTT#####.....",
 	"#T........T........####.",
-	"#................*.....#",
+	"#......................#",
 	"#.........####.........#",
 	"#..T.T.................#",
 	"#..........#TT###T.....#",
-	"#...*...............T..#",
+	"#...................T..#",
 	"#......####...#........#",
 	".##..###...........T...#",
 	"..#..#..###............#",
-	"...##......######TT...*#",
+	"...##......######TT....#",
 	".................##R...#",
 	"..................#M..2#",
 	"...................####.",
@@ -1328,10 +1271,6 @@ let initializeGameState = (gs) => {
 				// Team 1 start location
 				startLocations.t2x = xx;
 				startLocations.t2y = yy;
-			}
-			else if (letter === "*") {
-				// Lamp
-				let newTable = createAppliance(gs, "lamp", xx, yy);
 			}
 		});
 	});
@@ -1477,7 +1416,6 @@ let applyInputToPlayer = (playerObject, playerInput) => {
 		playerObject.leftPressed !== playerInput.leftPressed ||
 		playerObject.interactPressed !== playerInput.interactPressed ||
 		playerObject.reloadPressed !== playerInput.reloadPressed ||
-		playerObject.flashlightPressed !== playerInput.flashlightPressed ||
 		playerObject.runPressed !== playerInput.runPressed ||
 		playerObject.firePressed !== playerInput.firePressed ||
 		playerObject.readyPressed !== playerInput.readyPressed ||
@@ -1491,7 +1429,6 @@ let applyInputToPlayer = (playerObject, playerInput) => {
 		playerObject.leftPressed = playerInput.leftPressed;
 		playerObject.interactPressed = playerInput.interactPressed;
 		playerObject.reloadPressed = playerInput.reloadPressed;
-		playerObject.flashlightPressed = playerInput.flashlightPressed;
 		playerObject.runPressed = playerInput.runPressed;
 		playerObject.firePressed = playerInput.firePressed;
 		playerObject.readyPressed = playerInput.readyPressed;
@@ -1639,7 +1576,6 @@ let gameLoop = () => {
 					leftPressed: aDown,
 					interactPressed: eDown,
 					reloadPressed: rDown,
-					flashlightPressed: fDown,
 					runPressed: shiftDown,
 					firePressed: leftMouseDown,
 					readyPressed: rightMouseDown,
@@ -1710,15 +1646,6 @@ let removeUnneededMeshes = (meshList, gameObjectList) => {
 		// OR, gameObject has a different mesh attached (rollback shenanigans)
 		if (!gameObjectList.includes(mesh.connectedObject) || mesh.connectedObject.connectedMesh !== mesh) {
 			unneededMeshRemovedCount += 1;
-            // Remove any attached lights
-			if (mesh.spotLight !== undefined) {
-				scene.remove(mesh.spotLight);
-				mesh.spotLight.dispose();
-			}
-			if (mesh.pointLight !== undefined) {
-				scene.remove(mesh.pointLight);
-				mesh.pointLight.dispose();
-			}
 			scene.remove(mesh);
 			meshList.splice(meshList.indexOf(mesh), 1);
 		}
@@ -1791,16 +1718,7 @@ let renderFrame = (gs) => {
 		let applianceMesh = applianceObject.connectedMesh;
 		applianceMesh.position.x = applianceObject.xPosition;
 		applianceMesh.position.y = applianceObject.yPosition;
-		if (applianceObject.subType === "lamp") {
-			applianceMesh.position.z = 1.5;
-            if (applianceObject.lightOn) {
-                applianceMesh.pointLight.intensity = 0.4;
-            }
-            else {
-                applianceMesh.pointLight.intensity = 0;
-            }
-		}
-		else if (applianceObject.subType === "wall") {
+		if (applianceObject.subType === "wall") {
 			applianceMesh.position.z = 0.5;
 		}
 	});
@@ -1843,18 +1761,6 @@ let renderFrame = (gs) => {
                 }
             });
         }
-		if (playerObject.flashlightOn) {
-			playerMesh.spotLight.intensity = 1;
-		}
-		else {
-			playerMesh.spotLight.intensity = 0;
-		}
-		if (playerObject.itemCooldown > 4) {
-			playerMesh.pointLight.intensity = 1;
-		}
-		else {
-			playerMesh.pointLight.intensity = 0;
-		}
 	});
 	gs.itemList.forEach(itemObject => {
 		let itemMesh = itemObject.connectedMesh;
@@ -2084,18 +1990,14 @@ let gameLogic = (gs) => {
             gs.gameActive = true;
 			// Reset game to initial state
 			// Remove all held items from appliances besides supply tables
-			// Reset lamps (to "On")
 			gs.applianceList.forEach(applianceObject => {
 				if (applianceObject.holdingItem && applianceObject.subType !== "supply") {
 					transferItem(gs, applianceObject, undefined, applianceObject.heldItem);
 				}
-				if (applianceObject.subType === "lamp") {
-					applianceObject.lightOn = true;
-				}
 			});
 			// Remove all held items from players
 			// Set players locations back to initial starting point
-			// Set players health and other stats back to initial values. flashlight off, etc
+			// Set players health and other stats back to initial values. 
 			gs.playerList.forEach(playerObject => {
 				if (playerObject.holdingItem) {
 					transferItem(gs, playerObject, undefined, playerObject.heldItem);
@@ -2261,8 +2163,9 @@ let gameLogic = (gs) => {
 		let xPotential = playerObject.xPosition + playerObject.xSpeed;
 		let yPotential = playerObject.yPosition + playerObject.ySpeed;
 		let playerSize = 0.8;
-		// Skip lamps
-		let collisionApplianceList = gs.applianceList.filter(appliance => appliance.subType !== "lamp");
+		// Skip non-colliding appliances
+		//let collisionApplianceList = gs.applianceList.filter(appliance => appliance.subType !== "lamp");
+		let collisionApplianceList = gs.applianceList;
 		collisionApplianceList.forEach(appliance => {
 			if (Math.abs(appliance.xPosition - xPotential) <= playerSize &&
 				Math.abs(appliance.yPosition - yPotential) <= playerSize) {
@@ -2427,10 +2330,6 @@ let gameLogic = (gs) => {
 							transferItem(gs, undefined, playerObject, newItem);
 						}
 					}
-                    else if (applianceObject.subType === "lamp") {
-                        // Lamps: No items picked up or put down from, but can toggle light
-                        applianceObject.lightOn = !applianceObject.lightOn;
-                    }
                     else if (applianceObject.subType === "wall") {
 						// Walls: No interaction
                     }
@@ -2546,16 +2445,6 @@ let gameLogic = (gs) => {
 			}
 			playerObject.xSpeed += xRoll;
 			playerObject.ySpeed += yRoll;
-		}
-		// Flashlight: Can be done independently of everything else
-		if (playerObject.flashlightPressed) {
-			if (playerObject.flashlightReleased) {
-				playerObject.flashlightOn = !playerObject.flashlightOn;
-			}
-			playerObject.flashlightReleased = false;
-		}
-		else {
-			playerObject.flashlightReleased = true;
 		}
 		// Decrement various stun timers
 		// Action stun timers
