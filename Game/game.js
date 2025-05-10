@@ -1,6 +1,8 @@
 "use strict";
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+
+import {moveData} from "./moveData.js";
 
 console.log("Fighting3DGame game");
 
@@ -155,8 +157,9 @@ let enemy1AngryMaterial;
 
 let plant1Material;
 
-//let sceneLight;
+let sceneLight;
 let sceneLight2;
+let sceneLight3;
 
 let createGameState = () => {
 	return {
@@ -1189,9 +1192,18 @@ let init = () => {
 	floorMesh.receiveShadow = true;
 	scene.add(floorMesh);
 
-	// Lights
-	sceneLight2 = new THREE.AmbientLight(0xffffff, 0.1);
+	// Ambient light
+	sceneLight = new THREE.AmbientLight(0xffffff, 0.5);
+	scene.add(sceneLight);
+	// Directional light
+	sceneLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+	sceneLight2.position.set(0, 10, 0);
+	sceneLight2.target.position.set(-5, 0, 0);
 	scene.add(sceneLight2);
+	scene.add(sceneLight2.target);
+	// Hemisphere light
+	sceneLight3 = new THREE.HemisphereLight(0xAABBFF, 0xFFBB90, 0.5);
+	scene.add(sceneLight3);
 
 	addEventListener("keydown", keyDownFunction);
 	addEventListener("keyup", keyUpFunction);
@@ -1204,25 +1216,25 @@ let init = () => {
 window.addEventListener('load', init);
 
 let levelLayout = [
-	".####...................",
-	"#1..M#.......##.........",
-	"#...R##.....#..#........",
-	"#....TT######..#........",
+	"........................",
+	"........................",
+	"........................",
+	"#################.......",
 	"#...............#.......",
-	"#..........TTT#####.....",
-	"#T........T........####.",
+	"#...............###.....",
+	"#..................####.",
+	"#.....#..1.............#",
+	"#.....#................#",
 	"#......................#",
-	"#.........####.........#",
-	"#..T.T.................#",
-	"#..........#TT###T.....#",
-	"#...................T..#",
-	"#......####...#........#",
-	".##..###...........T...#",
-	"..#..#..###............#",
-	"...##......######TT....#",
-	".................##R...#",
-	"..................#M..2#",
-	"...................####.",
+	"#..........#.......2...#",
+	"#......................#",
+	"#.................##...#",
+	".#######...............#",
+	"........###............#",
+	"...........#############",
+	"........................",
+	"........................",
+	"........................",
 ];
 
 let initializeGameState = (gs) => {
