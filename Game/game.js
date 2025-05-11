@@ -6,6 +6,8 @@ import {moveData} from "./moveData.js";
 
 console.log("Fighting3DGame game");
 
+// gamepads
+let gamepads;
 
 let showDebug = true;
 let currentFrameSpan;
@@ -1212,6 +1214,9 @@ let init = () => {
 	addEventListener("mousemove", mouseMoveFunction);
 	addEventListener("contextmenu", contextMenuFunction);
 	addEventListener("resize", resizeFunction);
+	addEventListener("gamepadconnected", gamepadconnectedFunction);
+	addEventListener("gamepaddisconnected", gamepaddisconnectedFunction);
+	gamepads = navigator.getGamepads();
 }
 window.addEventListener('load', init);
 
@@ -1517,12 +1522,28 @@ let resimulateGame = () => {
 	}
 }
 
+let lastGamepadAxes = [0, 0, 0, 0];
+let lastGamepadButtons = [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false];
+
 let lastTime;
 let timeAccumulator = 0;
 let frameTime = 1000/60;
 //let shouldResetToInitialState = false;
 let gameLoop = () => {
 	if (gameStarted && currentGameState !== undefined && !gamePaused) {
+
+		let newGamepadInput = false;
+		if (gamepads.length > 0) {
+			let gamepadAxes = gamepads[0].axes;
+			let gamepadButtons = gamepads[0].buttons.map(btn => btn.pressed);
+			let anyAxesDifferent = !gamepadAxes.every((axis, index) => axis === lastGamepadAxes[index]);
+			let anyButtonDifferent = !gamepadButtons.every((button, index) => button === lastGamepadButtons[index]);
+			if (anyAxesDifferent || anyButtonDifferent) {
+				console.log("Controller changed");
+				lastGamepadAxes = gamepadAxes;
+				lastGamepadButtons = gamepadButtons;
+			}
+		}
 
 		// Do rollback simulations if needed
 		if (rollbackInputReceived) {
@@ -3033,6 +3054,15 @@ let resizeFunction = (event) => {
 	camera.aspect = window.innerWidth / window.innerHeight;
 	camera.updateProjectionMatrix();
 }
+
+let gamepadconnectedFunction = (event) => {
+	gamepads = navigator.getGamepads();
+}
+
+let gamepaddisconnectedFunction = (event) => {
+	gamepads = navigator.getGamepads();
+}
+
 let meshToScreenCoordinates = (mesh) => {
 	let vector = new THREE.Vector3();
 	mesh.updateMatrixWorld();
