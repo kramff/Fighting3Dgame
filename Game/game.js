@@ -412,6 +412,8 @@ let createPlayer = (gs, name, id, team) => {
 		xSpeed: 0,
 		ySpeed: 0,
 		rotation: 0,
+		cameraRotation: 0,
+		cameraTilt: 0,
 		// Appliance targeting
 		xTarget: 0,
 		yTarget: 0,
@@ -1538,6 +1540,7 @@ let resimulateGame = () => {
 
 let lastGamepadAxes = [0, 0, 0, 0];
 let lastGamepadButtons = [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false];
+let newGamepadInput = false;
 
 let lastTime;
 let timeAccumulator = 0;
@@ -1546,7 +1549,6 @@ let frameTime = 1000/60;
 let gameLoop = () => {
 	if (gameStarted && currentGameState !== undefined && !gamePaused) {
 
-		let newGamepadInput = false;
 		if (gamepads.length > 0) {
 			let gamepadAxes = gamepads[0].axes;
 			let gamepadButtons = gamepads[0].buttons.map(btn => btn.pressed);
@@ -1612,6 +1614,7 @@ let gameLoop = () => {
 			// Case 2: too long since last time input was sent to server (like a "heartbeat")
 			//if (currentView === "game" && (inputChanged || (lastInputSentFrame + 120 < currentFrameCount))) {
 			if (currentView === "game" && (newGamepadInput || (lastInputSentFrame + 120 < currentFrameCount))) {
+				newGamepadInput = false;
 				// inputDelay is normally 3
 				// use -10 when testing rollback 
 				let inputDelayToUse = inputDelay;
@@ -1897,8 +1900,9 @@ let renderFrame = (gs) => {
 	});
 	// Third person overhead camera
 	camera.position.set(localPlayerMesh.position.x, localPlayerMesh.position.y, localPlayerMesh.position.z + 10);
+	camera.rotation.set(localPlayer.cameraTilt, localPlayer.cameraRotation, 0);
+
 	localPlayerMesh.visible = true;
-	camera.rotation.set(0, 0, 0);
 	if (false) {
 		// Old overhead view
 		localPlayerMesh.visible = true;
@@ -2076,6 +2080,17 @@ let gameLogic = (gs) => {
     let team1AllDefeated = true;
     let team1AnyPlayers = false;
 	gs.playerList.forEach(playerObject => {
+		let leftStickX = playerObject.gamepadAxes[0];
+		let leftStickY = playerObject.gamepadAxes[1];
+		let rightStickX = playerObject.gamepadAxes[2];
+		let rightStickY = playerObject.gamepadAxes[3];
+		if (Math.abs(leftStickX) < 0.1) { leftStickX = 0; }
+		if (Math.abs(leftStickY) < 0.1) { leftStickY = 0; }
+		if (Math.abs(rightStickX) < 0.1) { rightStickX = 0; }
+		if (Math.abs(rightStickY) < 0.1) { rightStickY = 0; }
+		// Camera control
+		playerObject.cameraRotation += rightStickX * -0.01;
+		playerObject.cameraTilt += rightStickY * -0.01;
 		// Determine if stunned in some way
 		let stunned = playerObject.attackStun > 0 ||
 			playerObject.blockStun > 0 ||
@@ -2089,10 +2104,8 @@ let gameLogic = (gs) => {
 		let ySpeedChange = 0;
 		// Must not be stunned to move
 		if (!stunned) {
-			xSpeedChange += 0.02 * playerObject.gamepadAxes[0];
-			ySpeedChange += -0.02 * playerObject.gamepadAxes[1];
-			//xSpeedChange += 0.02 * playerObject.gamepadAxes[2];
-			//ySpeedChange += 0.02 * playerObject.gamepadAxes[3];
+			xSpeedChange += 0.02 * leftStickX;
+			ySpeedChange += -0.02 * leftStickY;
 			/*
 			if (playerObject.upPressed) {
 				ySpeedChange += 0.02;
