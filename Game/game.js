@@ -407,16 +407,20 @@ let createPlayer = (gs, name, id, team) => {
 		// Position and movement
 		xPosition: 0,
 		yPosition: 0,
+		zPosition: 0,
 		xStartPosition: 0,
 		yStartPosition: 0,
+		zStartPosition: 0,
 		xSpeed: 0,
 		ySpeed: 0,
+		zSpeed: 0,
 		rotation: 0,
 		cameraRotation: 0,
 		cameraTilt: 0,
 		// Appliance targeting
 		xTarget: 0,
 		yTarget: 0,
+		zTarget: 0,
 		// Status
 		health: 10,
 		maxHealth: 10,
@@ -488,12 +492,15 @@ let createPlayer = (gs, name, id, team) => {
 let resetPlayerObject = (playerObject) => {
 	playerObject.xPosition = playerObject.xStartPosition;
 	playerObject.yPosition = playerObject.yStartPosition;
+	playerObject.zPosition = playerObject.zStartPosition;
 	playerObject.xSpeed = 0;
 	playerObject.ySpeed = 0;
+	playerObject.zSpeed = 0;
 	playerObject.rotation = 0;
 	// Appliance targeting
 	playerObject.xTarget = 0;
 	playerObject.yTarget = 0;
+	playerObject.zTarget = 0;
 	// Status
 	playerObject.health = 10;
 	playerObject.maxHealth = 10;
@@ -560,7 +567,7 @@ let createPlayerMesh = (playerObject) => {
 	let playerMesh = new THREE.Mesh(cubeGeometry, matToUse);
 	playerMesh.scale.x = 0.8;
 	playerMesh.scale.y = 0.8;
-	playerMesh.scale.z = 1.5;
+	playerMesh.scale.z = 0.8;
 	playerMesh.castShadow = true;
 	playerMesh.receiveShadow = true;
 	scene.add(playerMesh);
@@ -572,12 +579,13 @@ let removePlayer = (gs, playerObject) => {
 	gs.playerList.splice(gs.playerList.indexOf(playerObject), 1);
 }
 
-let createAppliance = (gs, applianceType, xPosition, yPosition) => {
+let createAppliance = (gs, applianceType, xPosition, yPosition, zPosition) => {
 	let newAppliance = {
 		type: "appliance",
 		subType: applianceType,
 		xPosition: xPosition || 0,
 		yPosition: yPosition || 0,
+		zPosition: zPosition || 0,
 		rotation: 0,
 		holdingItem: false,
 		heldItem: undefined,
@@ -597,7 +605,7 @@ let createApplianceMesh = (applianceObject) => {
 		applianceMesh = new THREE.Mesh(cubeGeometry, wallMaterial);
 		applianceObject.regularMat = wallMaterial;
 		applianceObject.highlightMat = wallMaterial;
-		applianceMesh.scale.z = 2;
+		//applianceMesh.scale.z = 2;
 	}
 	else if (applianceObject.subType === "table") {
 		applianceMesh = new THREE.Mesh(cubeGeometry, tableMaterial);
@@ -737,6 +745,7 @@ let createProjectile = (gs, projectileType, xPosition, yPosition, rotation, spee
 		connectedOverlayObjects: {},
 		xPosition: xPosition || 0,
 		yPosition: yPosition || 0,
+		zPosition: zPosition || 0,
 		rotation: rotation || 0,
 		speed: speed || 0,
 		sourcePlayer: undefined,
@@ -808,6 +817,7 @@ let createEffect = (gs, effectType, xPosition, yPosition) => {
 		connectedOverlayObjects: {},
 		xPosition: xPosition || 0,
 		yPosition: yPosition || 0,
+		zPosition: zPosition || 0,
 		lifespan: 30,
 		toBeRemoved: false,
 	};
@@ -835,11 +845,14 @@ let createEnemy = (gs, enemyType, xPosition, yPosition) => {
 		connectedOverlayObjects: {},
 		xPosition: xPosition || 0,
 		yPosition: yPosition || 0,
+		zPosition: zPosition || 0,
 		xSpeed: 0,
 		ySpeed: 0,
+		zSpeed: 0,
 		rotation: 0,
 		xTarget: 0,
 		yTarget: 0,
+		zTarget: 0,
 		health: 20,
 		maxHealth: 20,
 		state: "idle",
@@ -887,6 +900,7 @@ let createPlant = (gs, plantType, xPosition, yPosition) => {
 		connectedOverlayObjects: {},
 		xPosition: xPosition || 0,
 		yPosition: yPosition || 0,
+		zPosition: zPosition || 0,
 		rotation: 0,
 		growth: 0,
 		maxGrowth: 10,
@@ -1899,8 +1913,16 @@ let renderFrame = (gs) => {
 		plantMesh.position.y = plantObject.yPosition;
 	});
 	// Third person overhead camera
-	camera.position.set(localPlayerMesh.position.x, localPlayerMesh.position.y, localPlayerMesh.position.z + 10);
-	camera.rotation.set(localPlayer.cameraTilt, localPlayer.cameraRotation, 0);
+	camera.position.set(
+		localPlayerMesh.position.x + 10 * Math.sin(localPlayer.cameraRotation),
+		localPlayerMesh.position.y - 10 * Math.sin(localPlayer.cameraTilt),
+		localPlayerMesh.position.z + 10 * Math.cos(localPlayer.cameraRotation) * Math.cos(localPlayer.cameraTilt)
+	);
+	camera.rotation.set(
+		localPlayer.cameraTilt,
+		localPlayer.cameraRotation,
+		0//localPlayer.cameraTilt * localPlayer.cameraRotation,
+	);
 
 	localPlayerMesh.visible = true;
 	if (false) {
@@ -2084,10 +2106,29 @@ let gameLogic = (gs) => {
 		let leftStickY = playerObject.gamepadAxes[1];
 		let rightStickX = playerObject.gamepadAxes[2];
 		let rightStickY = playerObject.gamepadAxes[3];
+		// Minimum values so there's no tiny drift
 		if (Math.abs(leftStickX) < 0.1) { leftStickX = 0; }
 		if (Math.abs(leftStickY) < 0.1) { leftStickY = 0; }
 		if (Math.abs(rightStickX) < 0.1) { rightStickX = 0; }
 		if (Math.abs(rightStickY) < 0.1) { rightStickY = 0; }
+		// TODO: should cap at 1 magnitude
+		let buttonA = playerObject.gamepadButtons[0];
+		let buttonB = playerObject.gamepadButtons[1];
+		let buttonX = playerObject.gamepadButtons[2];
+		let buttonY = playerObject.gamepadButtons[3];
+		let buttonL1 = playerObject.gamepadButtons[4];
+		let buttonR1 = playerObject.gamepadButtons[5];
+		let buttonL2 = playerObject.gamepadButtons[6];
+		let buttonR2 = playerObject.gamepadButtons[7];
+		let buttonSelect = playerObject.gamepadButtons[8];
+		let buttonStart = playerObject.gamepadButtons[9];
+		let buttonL3 = playerObject.gamepadButtons[10];
+		let buttonR3 = playerObject.gamepadButtons[11];
+		let buttonDUp = playerObject.gamepadButtons[12];
+		let buttonDDown = playerObject.gamepadButtons[13];
+		let buttonDLeft = playerObject.gamepadButtons[14];
+		let buttonDRight = playerObject.gamepadButtons[15];
+		let buttonCenter = playerObject.gamepadButtons[16];
 		// Camera control
 		playerObject.cameraRotation += rightStickX * -0.01;
 		playerObject.cameraTilt += rightStickY * -0.01;
