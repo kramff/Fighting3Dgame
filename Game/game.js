@@ -28,10 +28,6 @@ let scene;
 let camera;
 let renderer;
 
-let xCamera = 0;
-let yCamera = 0;
-let zCamera = 10;
-
 // Specific render stuff
 let cubeGeometry;
 let playerMaterial;
@@ -416,7 +412,7 @@ let createPlayer = (gs, name, id, team) => {
 		zSpeed: 0,
 		rotation: 0,
 		cameraRotation: 0,
-		cameraTilt: 0,
+		cameraTilt: 0.1,
 		// Appliance targeting
 		xTarget: 0,
 		yTarget: 0,
@@ -1128,6 +1124,7 @@ let init = () => {
 	scene = new THREE.Scene();
 	camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 	camera.position.z = 10;
+	camera.up = new THREE.Vector3(0, 0, 1);
 	renderer = new THREE.WebGLRenderer();
 	renderer.setSize(window.innerWidth, window.innerHeight);
 	document.body.appendChild(renderer.domElement);
@@ -1800,7 +1797,8 @@ let renderFrame = (gs) => {
 		let playerMesh = playerObject.connectedMesh;
 		playerMesh.position.x = playerObject.xPosition;
 		playerMesh.position.y = playerObject.yPosition;
-		playerMesh.position.z = 0.25;
+		//playerMesh.position.z = 0.25;
+		playerMesh.position.z = playerObject.zPosition;
 		playerMesh.rotation.z = playerObject.rotation;
         if (playerObject.defeated) {
 			if (playerObject.team === 1) {
@@ -1912,47 +1910,15 @@ let renderFrame = (gs) => {
 		plantMesh.position.x = plantObject.xPosition;
 		plantMesh.position.y = plantObject.yPosition;
 	});
-	// Third person overhead camera
+	// Third person camera
 	camera.position.set(
-		localPlayerMesh.position.x + 10 * Math.sin(localPlayer.cameraRotation),
-		localPlayerMesh.position.y - 10 * Math.sin(localPlayer.cameraTilt),
-		localPlayerMesh.position.z + 10 * Math.cos(localPlayer.cameraRotation) * Math.cos(localPlayer.cameraTilt)
+		localPlayerMesh.position.x + 10 * Math.sin(localPlayer.cameraRotation) * Math.sin(localPlayer.cameraTilt),
+		localPlayerMesh.position.y - 10 * Math.cos(localPlayer.cameraRotation) * Math.sin(localPlayer.cameraTilt),
+		localPlayerMesh.position.z + 10 * Math.cos(localPlayer.cameraTilt)
 	);
-	camera.rotation.set(
-		localPlayer.cameraTilt,
-		localPlayer.cameraRotation,
-		0//localPlayer.cameraTilt * localPlayer.cameraRotation,
-	);
+	camera.lookAt(localPlayerMesh.position);
 
 	localPlayerMesh.visible = true;
-	if (false) {
-		// Old overhead view
-		localPlayerMesh.visible = true;
-		camera.rotation.set(0, 0, 0);
-		let xMin = gs.playerList.reduce((x, object) => Math.min(object.xPosition, x), Infinity);
-		xMin = Math.min(xMin, gs.applianceList.reduce((x, object) => Math.min(object.xPosition, x), Infinity));
-
-		let xMax = gs.playerList.reduce((x, object) => Math.max(object.xPosition, x), -Infinity);
-		xMax = Math.max(xMax, gs.applianceList.reduce((x, object) => Math.max(object.xPosition, x), -Infinity));
-
-		let yMin = gs.playerList.reduce((y, object) => Math.min(object.yPosition, y), Infinity);
-		yMin = Math.min(yMin, gs.applianceList.reduce((y, object) => Math.min(object.yPosition, y), Infinity));
-
-		let yMax = gs.playerList.reduce((y, object) => Math.max(object.yPosition, y), -Infinity);
-		yMax = Math.max(yMax, gs.applianceList.reduce((y, object) => Math.max(object.yPosition, y), -Infinity));
-
-		let sceneSize = Math.max(Math.abs(xMax - xMin), Math.abs(yMax - yMin));
-
-		let xCamTarget = (xMin + xMax) / 2;
-		let yCamTarget = (yMin + yMax) / 2;
-		let zCamTarget = 5 + sceneSize * 0.5;
-		xCamera = 0.9 * xCamera + 0.1 * xCamTarget;
-		yCamera = 0.9 * yCamera + 0.1 * yCamTarget;
-		zCamera = 0.9 * zCamera + 0.1 * zCamTarget;
-		camera.position.x = xCamera;
-		camera.position.y = yCamera;
-		camera.position.z = zCamera;
-	}
 	// Actually render the 3d scene
 	renderer.render(scene, camera);
 	// Create overlays for all objects that need them
@@ -2107,11 +2073,19 @@ let gameLogic = (gs) => {
 		let rightStickX = playerObject.gamepadAxes[2];
 		let rightStickY = playerObject.gamepadAxes[3];
 		// Minimum values so there's no tiny drift
-		if (Math.abs(leftStickX) < 0.1) { leftStickX = 0; }
-		if (Math.abs(leftStickY) < 0.1) { leftStickY = 0; }
-		if (Math.abs(rightStickX) < 0.1) { rightStickX = 0; }
-		if (Math.abs(rightStickY) < 0.1) { rightStickY = 0; }
-		// TODO: should cap at 1 magnitude
+		if (Math.abs(leftStickX) < 0.1 && Math.abs(leftStickY) < 0.1) {
+			leftStickX = 0;
+			leftStickY = 0;
+		}
+		if (Math.abs(rightStickX) < 0.1 && Math.abs(rightStickY) < 0.1) {
+			rightStickX = 0;
+			rightStickY = 0;
+		}
+		// Rotate axes for left stick based on camera rotation
+		let origLeftX = leftStickX;
+		leftStickX = leftStickX * Math.cos(playerObject.cameraRotation) + leftStickY * Math.sin(playerObject.cameraRotation);
+		leftStickY = leftStickY * Math.cos(playerObject.cameraRotation) - origLeftX * Math.sin(playerObject.cameraRotation);
+		// TODO Cap at 1 magnitude
 		let buttonA = playerObject.gamepadButtons[0];
 		let buttonB = playerObject.gamepadButtons[1];
 		let buttonX = playerObject.gamepadButtons[2];
@@ -2130,8 +2104,22 @@ let gameLogic = (gs) => {
 		let buttonDRight = playerObject.gamepadButtons[15];
 		let buttonCenter = playerObject.gamepadButtons[16];
 		// Camera control
-		playerObject.cameraRotation += rightStickX * -0.01;
-		playerObject.cameraTilt += rightStickY * -0.01;
+		playerObject.cameraRotation += rightStickX * -0.03;
+		// Keep camera rotation between 0 and 2PI
+		if (playerObject.cameraRotation > Math.PI * 2) {
+			playerObject.cameraRotation -= Math.PI * 2;
+		}
+		if (playerObject.cameraRotation < 0) {
+			playerObject.cameraRotation += Math.PI * 2;
+		}
+		// Keep camera tilt between 0 and 1/2PI
+		playerObject.cameraTilt += rightStickY * -0.03;
+		if (playerObject.cameraTilt > Math.PI / 2 - 0.1) {
+			playerObject.cameraTilt = Math.PI / 2 - 0.1;
+		}
+		if (playerObject.cameraTilt < 0.1) {
+			playerObject.cameraTilt = 0.1;
+		}
 		// Determine if stunned in some way
 		let stunned = playerObject.attackStun > 0 ||
 			playerObject.blockStun > 0 ||
@@ -2143,10 +2131,16 @@ let gameLogic = (gs) => {
 		// Player Movement
 		let xSpeedChange = 0;
 		let ySpeedChange = 0;
+		let zSpeedChange = 0;
 		// Must not be stunned to move
 		if (!stunned) {
 			xSpeedChange += 0.02 * leftStickX;
 			ySpeedChange += -0.02 * leftStickY;
+			// TODO: Check if the player is at Z: 0 or standing on an object
+			// TODO: Add a way to check if the button was newly pressed? "buttonReleasedA" or something
+			if (buttonA && playerObject.zPosition === 0) {
+				zSpeedChange += 0.5;
+			}
 			/*
 			if (playerObject.upPressed) {
 				ySpeedChange += 0.02;
@@ -2207,7 +2201,8 @@ let gameLogic = (gs) => {
         }
 		let oppositeRotation = false;
 		//if (anyDirectionPressed || playerObject.readyPressed || playerObject.movedMouseWhileStill) {
-		if (false) {
+		//if (false) {
+		if (anyDirectionPressed) {
 			if (playerObject.rotation !== targetRotation) {
 				let targetRotationDifference = Math.abs(playerObject.rotation - targetRotation);
 				// Apply spin to player's rotation toward targetRotation
@@ -2275,14 +2270,22 @@ let gameLogic = (gs) => {
 			xSpeedChange *= 0.5;
 			ySpeedChange *= 0.5;
 		}*/
+		// Gravity
+		if (playerObject.zPosition > 0) {
+			zSpeedChange -= 0.04;
+		}
+		// Apply speed changes
 		playerObject.xSpeed += xSpeedChange;
 		playerObject.ySpeed += ySpeedChange;
+		playerObject.zSpeed += zSpeedChange;
 		// Check for appliances in the way
 		let xPotential = playerObject.xPosition + playerObject.xSpeed;
 		let yPotential = playerObject.yPosition + playerObject.ySpeed;
+		let zPotential = playerObject.zPosition + playerObject.zSpeed;
 		let playerSize = 0.8;
 		// Skip non-colliding appliances
 		//let collisionApplianceList = gs.applianceList.filter(appliance => appliance.subType !== "lamp");
+		// TODO: also check z axis
 		let collisionApplianceList = gs.applianceList;
 		collisionApplianceList.forEach(appliance => {
 			if (Math.abs(appliance.xPosition - xPotential) <= playerSize &&
@@ -2343,8 +2346,11 @@ let gameLogic = (gs) => {
 		});
 		playerObject.xPosition += playerObject.xSpeed;
 		playerObject.yPosition += playerObject.ySpeed;
+		playerObject.zPosition += playerObject.zSpeed;
+		playerObject.zPosition = Math.max(playerObject.zPosition, 0);
 		playerObject.xSpeed *= 0.75;
 		playerObject.ySpeed *= 0.75;
+		playerObject.zSpeed *= 0.95;
 		// Apply more friction if stopping
 		if (!anyDirectionPressed) {
 			playerObject.xSpeed *= 0.8;
@@ -2352,6 +2358,7 @@ let gameLogic = (gs) => {
 		}
 		playerObject.xTarget = Math.round(playerObject.xPosition + Math.cos(playerObject.rotation));
 		playerObject.yTarget = Math.round(playerObject.yPosition + Math.sin(playerObject.rotation));
+		playerObject.zTarget = Math.round(playerObject.zPosition);
 
 		if (playerObject.itemCooldown > 0) {
 			playerObject.itemCooldown -= 1;
