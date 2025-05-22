@@ -472,6 +472,7 @@ let createPlayer = (gs, name, id, team) => {
 		specialReleased: false,*/
 		gamepadAxes: [0, 0, 0, 0],
 		gamepadButtons: [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
+		releasedButtons: [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
 		// Graphics
 		connectedMesh: undefined,
 		connectedOverlayObjects: {},
@@ -1787,9 +1788,7 @@ let renderFrame = (gs) => {
 		let applianceMesh = applianceObject.connectedMesh;
 		applianceMesh.position.x = applianceObject.xPosition;
 		applianceMesh.position.y = applianceObject.yPosition;
-		if (applianceObject.subType === "wall") {
-			applianceMesh.position.z = 0.5;
-		}
+		applianceMesh.position.z = applianceObject.zPosition;
 	});
 	let localPlayer = getLocalPlayer(gs);
 	let localPlayerMesh = localPlayer.connectedMesh;
@@ -2068,6 +2067,47 @@ let gameLogic = (gs) => {
     let team1AllDefeated = true;
     let team1AnyPlayers = false;
 	gs.playerList.forEach(playerObject => {
+		// Buttons
+		let buttonA = playerObject.gamepadButtons[0];
+		let buttonB = playerObject.gamepadButtons[1];
+		let buttonX = playerObject.gamepadButtons[2];
+		let buttonY = playerObject.gamepadButtons[3];
+		let buttonL1 = playerObject.gamepadButtons[4];
+		let buttonR1 = playerObject.gamepadButtons[5];
+		let buttonL2 = playerObject.gamepadButtons[6];
+		let buttonR2 = playerObject.gamepadButtons[7];
+		let buttonSelect = playerObject.gamepadButtons[8];
+		let buttonStart = playerObject.gamepadButtons[9];
+		let buttonL3 = playerObject.gamepadButtons[10];
+		let buttonR3 = playerObject.gamepadButtons[11];
+		let buttonDUp = playerObject.gamepadButtons[12];
+		let buttonDDown = playerObject.gamepadButtons[13];
+		let buttonDLeft = playerObject.gamepadButtons[14];
+		let buttonDRight = playerObject.gamepadButtons[15];
+		let buttonCenter = playerObject.gamepadButtons[16];
+		// Check for new presses (instead of just held buttons)
+		let releasedA = playerObject.releasedButtons[0];
+		let releasedB = playerObject.releasedButtons[1];
+		let releasedX = playerObject.releasedButtons[2];
+		let releasedY = playerObject.releasedButtons[3];
+		let releasedL1 = playerObject.releasedButtons[4];
+		let releasedR1 = playerObject.releasedButtons[5];
+		let releasedL2 = playerObject.releasedButtons[6];
+		let releasedR2 = playerObject.releasedButtons[7];
+		let releasedSelect = playerObject.releasedButtons[8];
+		let releasedStart = playerObject.releasedButtons[9];
+		let releasedL3 = playerObject.releasedButtons[10];
+		let releasedR3 = playerObject.releasedButtons[11];
+		let releasedDUp = playerObject.releasedButtons[12];
+		let releasedDDown = playerObject.releasedButtons[13];
+		let releasedDLeft = playerObject.releasedButtons[14];
+		let releasedDRight = playerObject.releasedButtons[15];
+		let releasedCenter = playerObject.releasedButtons[16];
+		// Update releasedButtons
+		playerObject.releasedButtons.forEach((item, index) => {
+			playerObject.releasedButtons[index] = !playerObject.gamepadButtons[index];
+		});
+		// Set left and right stick x and y
 		let leftStickX = playerObject.gamepadAxes[0];
 		let leftStickY = playerObject.gamepadAxes[1];
 		let rightStickX = playerObject.gamepadAxes[2];
@@ -2086,23 +2126,6 @@ let gameLogic = (gs) => {
 		leftStickX = leftStickX * Math.cos(playerObject.cameraRotation) + leftStickY * Math.sin(playerObject.cameraRotation);
 		leftStickY = leftStickY * Math.cos(playerObject.cameraRotation) - origLeftX * Math.sin(playerObject.cameraRotation);
 		// TODO Cap at 1 magnitude
-		let buttonA = playerObject.gamepadButtons[0];
-		let buttonB = playerObject.gamepadButtons[1];
-		let buttonX = playerObject.gamepadButtons[2];
-		let buttonY = playerObject.gamepadButtons[3];
-		let buttonL1 = playerObject.gamepadButtons[4];
-		let buttonR1 = playerObject.gamepadButtons[5];
-		let buttonL2 = playerObject.gamepadButtons[6];
-		let buttonR2 = playerObject.gamepadButtons[7];
-		let buttonSelect = playerObject.gamepadButtons[8];
-		let buttonStart = playerObject.gamepadButtons[9];
-		let buttonL3 = playerObject.gamepadButtons[10];
-		let buttonR3 = playerObject.gamepadButtons[11];
-		let buttonDUp = playerObject.gamepadButtons[12];
-		let buttonDDown = playerObject.gamepadButtons[13];
-		let buttonDLeft = playerObject.gamepadButtons[14];
-		let buttonDRight = playerObject.gamepadButtons[15];
-		let buttonCenter = playerObject.gamepadButtons[16];
 		// Camera control
 		playerObject.cameraRotation += rightStickX * -0.03;
 		// Keep camera rotation between 0 and 2PI
@@ -2132,14 +2155,16 @@ let gameLogic = (gs) => {
 		let xSpeedChange = 0;
 		let ySpeedChange = 0;
 		let zSpeedChange = 0;
+		let startingJump = false;
 		// Must not be stunned to move
 		if (!stunned) {
 			xSpeedChange += 0.02 * leftStickX;
 			ySpeedChange += -0.02 * leftStickY;
 			// TODO: Check if the player is at Z: 0 or standing on an object
 			// TODO: Add a way to check if the button was newly pressed? "buttonReleasedA" or something
-			if (buttonA && playerObject.zPosition === 0) {
-				zSpeedChange += 0.5;
+			if (buttonA && releasedA &&playerObject.zPosition === 0) {
+				zSpeedChange += 0.35;
+				startingJump = true;
 			}
 			/*
 			if (playerObject.upPressed) {
@@ -2272,12 +2297,15 @@ let gameLogic = (gs) => {
 		}*/
 		// Gravity
 		if (playerObject.zPosition > 0) {
-			zSpeedChange -= 0.04;
+			zSpeedChange -= 0.031;
 		}
 		// Apply speed changes
 		playerObject.xSpeed += xSpeedChange;
 		playerObject.ySpeed += ySpeedChange;
 		playerObject.zSpeed += zSpeedChange;
+		if (startingJump) {
+			playerObject.zSpeed = zSpeedChange;
+		}
 		// Check for appliances in the way
 		let xPotential = playerObject.xPosition + playerObject.xSpeed;
 		let yPotential = playerObject.yPosition + playerObject.ySpeed;
@@ -2350,7 +2378,7 @@ let gameLogic = (gs) => {
 		playerObject.zPosition = Math.max(playerObject.zPosition, 0);
 		playerObject.xSpeed *= 0.75;
 		playerObject.ySpeed *= 0.75;
-		playerObject.zSpeed *= 0.95;
+		playerObject.zSpeed *= 0.97;
 		// Apply more friction if stopping
 		if (!anyDirectionPressed) {
 			playerObject.xSpeed *= 0.8;
