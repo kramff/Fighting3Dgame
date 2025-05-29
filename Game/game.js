@@ -1123,7 +1123,7 @@ let init = () => {
 
 	//nicknameInput.oninput
 	scene = new THREE.Scene();
-	camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+	camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 	camera.position.z = 10;
 	camera.up = new THREE.Vector3(0, 0, 1);
 	renderer = new THREE.WebGLRenderer();
@@ -1241,9 +1241,9 @@ window.addEventListener('load', init);
 
 let levelLayout = [
 	"........................",
-	"........................",
-	"........................",
-	"#################.......",
+	"...................###..",
+	"...................###..",
+	"#################..###..",
 	"#...............#.......",
 	"#...............###.....",
 	"#..................####.",
@@ -1911,9 +1911,9 @@ let renderFrame = (gs) => {
 	});
 	// Third person camera
 	camera.position.set(
-		localPlayerMesh.position.x + 10 * Math.sin(localPlayer.cameraRotation) * Math.sin(localPlayer.cameraTilt),
-		localPlayerMesh.position.y - 10 * Math.cos(localPlayer.cameraRotation) * Math.sin(localPlayer.cameraTilt),
-		localPlayerMesh.position.z + 10 * Math.cos(localPlayer.cameraTilt)
+		localPlayerMesh.position.x + 20 * Math.sin(localPlayer.cameraRotation) * Math.sin(localPlayer.cameraTilt),
+		localPlayerMesh.position.y - 20 * Math.cos(localPlayer.cameraRotation) * Math.sin(localPlayer.cameraTilt),
+		localPlayerMesh.position.z + 20 * Math.cos(localPlayer.cameraTilt)
 	);
 	camera.lookAt(localPlayerMesh.position);
 
@@ -2155,17 +2155,16 @@ let gameLogic = (gs) => {
 		let xSpeedChange = 0;
 		let ySpeedChange = 0;
 		let zSpeedChange = 0;
-		let startingJump = false;
 		// Must not be stunned to move
 		if (!stunned) {
-			xSpeedChange += 0.02 * leftStickX;
-			ySpeedChange += -0.02 * leftStickY;
+			// Movement
+			xSpeedChange += 0.015 * leftStickX;
+			ySpeedChange += -0.015 * leftStickY;
 			// TODO: Check if the player is at Z: 0 or standing on an object
 			// TODO: Add a way to check if the button was newly pressed? "buttonReleasedA" or something
-			if (buttonA && releasedA &&playerObject.zPosition === 0) {
+			/*if (buttonA && releasedA &&playerObject.zPosition === 0) {
 				zSpeedChange += 0.35;
-				startingJump = true;
-			}
+			}*/
 			/*
 			if (playerObject.upPressed) {
 				ySpeedChange += 0.02;
@@ -2297,37 +2296,67 @@ let gameLogic = (gs) => {
 		}*/
 		// Gravity
 		if (playerObject.zPosition > 0) {
-			zSpeedChange -= 0.031;
+			zSpeedChange -= 0.015;
 		}
 		// Apply speed changes
 		playerObject.xSpeed += xSpeedChange;
 		playerObject.ySpeed += ySpeedChange;
 		playerObject.zSpeed += zSpeedChange;
-		if (startingJump) {
-			playerObject.zSpeed = zSpeedChange;
-		}
 		// Check for appliances in the way
 		let xPotential = playerObject.xPosition + playerObject.xSpeed;
 		let yPotential = playerObject.yPosition + playerObject.ySpeed;
 		let zPotential = playerObject.zPosition + playerObject.zSpeed;
-		let playerSize = 0.8;
+		let playerSize = 0.9;
 		// Skip non-colliding appliances
 		//let collisionApplianceList = gs.applianceList.filter(appliance => appliance.subType !== "lamp");
 		// TODO: also check z axis
+		let standingOnAppliance = false;
 		let collisionApplianceList = gs.applianceList;
 		collisionApplianceList.forEach(appliance => {
 			if (Math.abs(appliance.xPosition - xPotential) <= playerSize &&
-				Math.abs(appliance.yPosition - yPotential) <= playerSize) {
+				Math.abs(appliance.yPosition - yPotential) <= playerSize &&
+				Math.abs(appliance.zPosition - zPotential) <= playerSize) {
 				let xAppDif = Math.abs(playerObject.xPosition - appliance.xPosition);
 				let yAppDif = Math.abs(playerObject.yPosition - appliance.yPosition);
-				if (xAppDif > yAppDif) {
+				let zAppDif = Math.abs(playerObject.zPosition - appliance.zPosition);
+				if (zAppDif > xAppDif && zAppDif > yAppDif) {
+					// Vertical top or bottom side
+					if (playerObject.zPosition > appliance.zPosition) {
+						// Vertical top side
+						// Make sure appliance's vertical top side isn't covered by another appliance
+						let topSideCovered = collisionApplianceList.some(otherAppliance => {
+							return otherAppliance.xPosition === appliance.xPosition &&
+								otherAppliance.yPosition === appliance.yPosition &&
+								otherAppliance.zPosition === appliance.zPosition + 1;
+						});
+						if (!topSideCovered) {
+							playerObject.zSpeed = Math.max(playerObject.zSpeed, playerSize + appliance.zPosition - playerObject.zPosition);
+							// Standing on the appliance - should be able to jump as if at z=0
+							standingOnAppliance = true;
+						}
+					}
+					else {
+						// Vertical bottom side
+						// Make sure appliance's bottom side isn't covered by another appliance
+						let bottomSideCovered = collisionApplianceList.some(otherAppliance => {
+							return otherAppliance.xPosition === appliance.xPosition &&
+								otherAppliance.yPosition === appliance.yPosition &&
+								otherAppliance.zPosition === appliance.zPosition - 1;
+						});
+						if (!bottomSideCovered) {
+							playerObject.zSpeed = Math.min(playerObject.zSpeed, -playerSize + appliance.zPosition - playerObject.zPosition);
+						}
+					}
+				}
+				else if (xAppDif > yAppDif) {
 					// Left or right side
 					if (playerObject.xPosition > appliance.xPosition) {
 						// Right side
 						// Make sure appliance's right side isn't covered by another appliance
 						let rightSideCovered = collisionApplianceList.some(otherAppliance => {
 							return otherAppliance.xPosition === appliance.xPosition + 1 &&
-								otherAppliance.yPosition === appliance.yPosition;
+								otherAppliance.yPosition === appliance.yPosition && 
+								otherAppliance.zPosition === appliance.zPosition;
 						});
 						if (!rightSideCovered) {
 							playerObject.xSpeed = Math.max(playerObject.xSpeed, playerSize + appliance.xPosition - playerObject.xPosition);
@@ -2338,7 +2367,8 @@ let gameLogic = (gs) => {
 						// Make sure appliance's right side isn't covered by another appliance
 						let leftSideCovered = collisionApplianceList.some(otherAppliance => {
 							return otherAppliance.xPosition === appliance.xPosition - 1 &&
-								otherAppliance.yPosition === appliance.yPosition;
+								otherAppliance.yPosition === appliance.yPosition &&
+								otherAppliance.zPosition === appliance.zPosition;
 						});
 						if (!leftSideCovered) {
 							playerObject.xSpeed = Math.min(playerObject.xSpeed, -playerSize + appliance.xPosition - playerObject.xPosition);
@@ -2352,7 +2382,8 @@ let gameLogic = (gs) => {
 						// Make sure appliance's bottom side isn't covered by another appliance
 						let bottomSideCovered = collisionApplianceList.some(otherAppliance => {
 							return otherAppliance.xPosition === appliance.xPosition &&
-								otherAppliance.yPosition === appliance.yPosition + 1;
+								otherAppliance.yPosition === appliance.yPosition + 1 &&
+								otherAppliance.zPosition === appliance.zPosition;
 						});
 						if (!bottomSideCovered) {
 							playerObject.ySpeed = Math.max(playerObject.ySpeed, playerSize + appliance.yPosition - playerObject.yPosition);
@@ -2363,7 +2394,8 @@ let gameLogic = (gs) => {
 						// Make sure appliance's right side isn't covered by another appliance
 						let topSideCovered = collisionApplianceList.some(otherAppliance => {
 							return otherAppliance.xPosition === appliance.xPosition &&
-								otherAppliance.yPosition === appliance.yPosition - 1;
+								otherAppliance.yPosition === appliance.yPosition - 1 &&
+								otherAppliance.zPosition === appliance.zPosition;
 						});
 						if (!topSideCovered) {
 							playerObject.ySpeed = Math.min(playerObject.ySpeed, -playerSize + appliance.yPosition - playerObject.yPosition);
@@ -2372,17 +2404,22 @@ let gameLogic = (gs) => {
 				}
 			}
 		});
+		// Jump
+		if (!stunned && buttonA && releasedA && (playerObject.zPosition === 0 || standingOnAppliance)) {
+			zSpeedChange += 0.35;
+			playerObject.zSpeed = zSpeedChange;
+		}
 		playerObject.xPosition += playerObject.xSpeed;
 		playerObject.yPosition += playerObject.ySpeed;
 		playerObject.zPosition += playerObject.zSpeed;
 		playerObject.zPosition = Math.max(playerObject.zPosition, 0);
-		playerObject.xSpeed *= 0.75;
-		playerObject.ySpeed *= 0.75;
-		playerObject.zSpeed *= 0.97;
+		playerObject.xSpeed *= 0.93;
+		playerObject.ySpeed *= 0.93;
+		playerObject.zSpeed *= 0.95;
 		// Apply more friction if stopping
 		if (!anyDirectionPressed) {
-			playerObject.xSpeed *= 0.8;
-			playerObject.ySpeed *= 0.8;
+			playerObject.xSpeed *= 0.95;
+			playerObject.ySpeed *= 0.95;
 		}
 		playerObject.xTarget = Math.round(playerObject.xPosition + Math.cos(playerObject.rotation));
 		playerObject.yTarget = Math.round(playerObject.yPosition + Math.sin(playerObject.rotation));
