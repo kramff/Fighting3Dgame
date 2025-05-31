@@ -442,6 +442,9 @@ let createPlayer = (gs, name, id, team) => {
 		staggerStun: 0,
 		knockdownStun: 0,
 		getupStun: 0,
+		// Information about activated moves
+		xRoll: 0,
+		yRoll: 0,
 		// Item
 		itemCooldown: 0,
 		holdingItem: false,
@@ -522,6 +525,9 @@ let resetPlayerObject = (playerObject) => {
 	playerObject.knockdownStun = 0;
 	playerObject.getupStun = 0;
 	playerObject.rollStun = 0;
+	// Information about activated moves
+	playerObject.rollX = 0;
+	playerObject.rollY = 0;
 	// Item
 	playerObject.itemCooldown = 0;
 	playerObject.holdingItem = false;
@@ -624,7 +630,7 @@ let createApplianceMesh = (applianceObject) => {
 		console.log("appliance type missing: " + applianceObject.subType);
 		applianceMesh = new THREE.Mesh(cubeGeometry, tableMaterial);
 	}
-	applianceMesh.castShadow = true;
+	//applianceMesh.castShadow = true;
 	applianceMesh.receiveShadow = true;
 	scene.add(applianceMesh);
 	applianceMeshList.push(applianceMesh);
@@ -1214,16 +1220,17 @@ let init = () => {
 	scene.add(floorMesh);
 
 	// Ambient light
-	sceneLight = new THREE.AmbientLight(0xffffff, 0.5);
+	sceneLight = new THREE.AmbientLight(0xffffff, 0.2);
 	scene.add(sceneLight);
 	// Directional light
-	sceneLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
-	sceneLight2.position.set(0, 10, 0);
-	sceneLight2.target.position.set(-5, 0, 0);
+	sceneLight2 = new THREE.DirectionalLight(0xffffff, 0.8);
+	sceneLight2.position.set(1, 1, 10);
+	sceneLight2.target.position.set(2, 2, -1);
+	sceneLight2.castShadow = true;
 	scene.add(sceneLight2);
 	scene.add(sceneLight2.target);
 	// Hemisphere light
-	sceneLight3 = new THREE.HemisphereLight(0xAABBFF, 0xFFBB90, 0.5);
+	sceneLight3 = new THREE.HemisphereLight(0xAABBFF, 0xFFBB90, 0.3);
 	scene.add(sceneLight3);
 
 	addEventListener("keydown", keyDownFunction);
@@ -1255,10 +1262,10 @@ let levelLayout = [
 	"#.................##...#",
 	".#######...............#",
 	"........###............#",
-	"...........#############",
-	"........................",
-	"........................",
-	"........................",
+	".#.#.#.#...#############",
+	".#.###.#................",
+	".#.....#................",
+	".#######................",
 ];
 
 let initializeGameState = (gs) => {
@@ -1567,7 +1574,7 @@ let gameLoop = () => {
 			let anyAxesDifferent = !gamepadAxes.every((axis, index) => axis === lastGamepadAxes[index]);
 			let anyButtonDifferent = !gamepadButtons.every((button, index) => button === lastGamepadButtons[index]);
 			if (anyAxesDifferent || anyButtonDifferent) {
-				console.log("Controller changed");
+				//console.log("Controller changed");
 				lastGamepadAxes = gamepadAxes;
 				lastGamepadButtons = gamepadButtons;
 				newGamepadInput = true;
@@ -1792,13 +1799,22 @@ let renderFrame = (gs) => {
 	});
 	let localPlayer = getLocalPlayer(gs);
 	let localPlayerMesh = localPlayer.connectedMesh;
+	sceneLight2.position.set(localPlayerMesh.position.x, localPlayerMesh.position.y, localPlayerMesh.position.z + 10);
+	sceneLight2.target.position.set(localPlayerMesh.position.x, localPlayerMesh.position.y, localPlayerMesh.position.z - 5);
 	gs.playerList.forEach(playerObject => {
 		let playerMesh = playerObject.connectedMesh;
 		playerMesh.position.x = playerObject.xPosition;
 		playerMesh.position.y = playerObject.yPosition;
 		//playerMesh.position.z = 0.25;
 		playerMesh.position.z = playerObject.zPosition;
+		// Roll rotation
+		playerMesh.rotation.x = 0;
+		playerMesh.rotation.y = 0;
 		playerMesh.rotation.z = playerObject.rotation;
+		if (playerObject.rolling) {
+			playerMesh.rotateY(-2 * Math.PI * playerObject.rollStun / 15);
+		}
+		
         if (playerObject.defeated) {
 			if (playerObject.team === 1) {
 				playerMesh.material = playerTeam1DefeatedMaterial;
@@ -2125,7 +2141,12 @@ let gameLogic = (gs) => {
 		let origLeftX = leftStickX;
 		leftStickX = leftStickX * Math.cos(playerObject.cameraRotation) + leftStickY * Math.sin(playerObject.cameraRotation);
 		leftStickY = leftStickY * Math.cos(playerObject.cameraRotation) - origLeftX * Math.sin(playerObject.cameraRotation);
-		// TODO Cap at 1 magnitude
+		// Cap at 1 magnitude (Normalize the movement vector)
+		let leftStickMagnitude = Math.sqrt(leftStickX * leftStickX + leftStickY * leftStickY);
+		if (leftStickMagnitude > 1) {
+			leftStickX = leftStickX / leftStickMagnitude;
+			leftStickY = leftStickY / leftStickMagnitude;
+		}
 		// Camera control
 		playerObject.cameraRotation += rightStickX * -0.03;
 		// Keep camera rotation between 0 and 2PI
@@ -2158,13 +2179,8 @@ let gameLogic = (gs) => {
 		// Must not be stunned to move
 		if (!stunned) {
 			// Movement
-			xSpeedChange += 0.015 * leftStickX;
-			ySpeedChange += -0.015 * leftStickY;
-			// TODO: Check if the player is at Z: 0 or standing on an object
-			// TODO: Add a way to check if the button was newly pressed? "buttonReleasedA" or something
-			/*if (buttonA && releasedA &&playerObject.zPosition === 0) {
-				zSpeedChange += 0.35;
-			}*/
+			xSpeedChange += 0.006 * leftStickX;
+			ySpeedChange += -0.006 * leftStickY;
 			/*
 			if (playerObject.upPressed) {
 				ySpeedChange += 0.02;
@@ -2309,7 +2325,6 @@ let gameLogic = (gs) => {
 		let playerSize = 0.9;
 		// Skip non-colliding appliances
 		//let collisionApplianceList = gs.applianceList.filter(appliance => appliance.subType !== "lamp");
-		// TODO: also check z axis
 		let standingOnAppliance = false;
 		let collisionApplianceList = gs.applianceList;
 		collisionApplianceList.forEach(appliance => {
@@ -2498,17 +2513,21 @@ let gameLogic = (gs) => {
 			else {
 				//playerObject.reloadReleased = true;
 			}
-			// Shift - Roll / dodge
-			//if (playerObject.runPressed) {
-			if (false) {
-				/*if (playerObject.runReleased) {
-					doRoll = true;
-				}
-				playerObject.runReleased = false;
-				*/
+			// R1 - Light attack
+			if (buttonR1 && releasedR1) {
+				doLightAttack = true;
 			}
-			else {
-				//playerObject.runReleased = true;
+			// R2 - Medium attack
+			if (buttonR2 && releasedR2) {
+				mediumAttacking = true;
+			}
+			// L1 - Special attack
+			if (buttonL1 && releasedL1) {
+				specialAttacking = true;
+			}
+			// Shift - Roll / dodge
+			if (buttonB && releasedB) {
+				doRoll = true;
 			}
 		}
 		if (doInteraction) {
@@ -2625,28 +2644,15 @@ let gameLogic = (gs) => {
 		else if (doRoll) {
 			playerObject.rolling = true;
 			playerObject.rollStun = 15;
-			let xRoll = 0;
-			let yRoll = 0;
-			/*
-			if (playerObject.leftPressed) {
-				xRoll -= 1;
-			}
-			if (playerObject.rightPressed) {
-				xRoll += 1;
-			}
-			if (playerObject.upPressed) {
-				yRoll += 1;
-			}
-			if (playerObject.downPressed) {
-				yRoll -= 1;
-			}
-			*/
-			if (xRoll !== 0 && yRoll !== 0) {
-				xRoll *= 0.707;
-				yRoll *= 0.707;
-			}
-			playerObject.xSpeed += xRoll;
-			playerObject.ySpeed += yRoll;
+			// Set roll movement vector
+			playerObject.xRoll = leftStickX;
+			playerObject.yRoll = -leftStickY;
+			// Reduce existing momentum so the roll is more significant
+			playerObject.xSpeed *= 0.4;
+			playerObject.ySpeed *= 0.4;
+			// Apply initial roll movement
+			playerObject.xSpeed += playerObject.xRoll * 0.2;
+			playerObject.ySpeed += playerObject.yRoll * 0.2;
 		}
 		// Decrement various stun timers
 		// Action stun timers
@@ -2669,6 +2675,9 @@ let gameLogic = (gs) => {
 		}
 		if (playerObject.rolling) {
 			playerObject.rollStun -= 1;
+			// Apply additional roll movement
+			playerObject.xSpeed += playerObject.xRoll * 0.03;
+			playerObject.ySpeed += playerObject.yRoll * 0.03;
 			if (playerObject.rollStun <= 0) {
 				playerObject.rolling = false;
 				playerObject.rollStun = 0;
