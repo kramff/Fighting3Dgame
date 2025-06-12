@@ -2519,11 +2519,11 @@ let gameLogic = (gs) => {
 			}
 			// R2 - Medium attack
 			if (buttonR2 && releasedR2) {
-				mediumAttacking = true;
+				doMediumAttack = true;
 			}
 			// L1 - Special attack
 			if (buttonL1 && releasedL1) {
-				specialAttacking = true;
+				doSpecialAttack = true;
 			}
 			// Shift - Roll / dodge
 			if (buttonB && releasedB) {
@@ -2716,7 +2716,7 @@ let gameLogic = (gs) => {
 		}
 		// Do actions on specific frames of actions
 		if (playerObject.lightAttacking) {
-			if (playerObject.heldItem.subType === "machinegun") {
+			/*if (playerObject.heldItem.subType === "machinegun") {
 				if (playerObject.attackStun === 16) {
 					let projectileObject = createProjectile(gs, "bullet", playerObject.xPosition, playerObject.yPosition, playerObject.rotation - 0.15, 0.7);
 					projectileObject.sourcePlayer = playerObject;
@@ -2729,10 +2729,10 @@ let gameLogic = (gs) => {
 					let projectileObject = createProjectile(gs, "bullet", playerObject.xPosition, playerObject.yPosition, playerObject.rotation + 0.15, 0.7);
 					projectileObject.sourcePlayer = playerObject;
 				}
-			}
+			}*/
 		}
 		if (playerObject.mediumAttacking) {
-			if (playerObject.heldItem.subType === "machinegun") {
+			/*if (playerObject.heldItem.subType === "machinegun") {
 				if (playerObject.attackStun === 35) {
 					let projectileObject = createProjectile(gs, "bullet", playerObject.xPosition, playerObject.yPosition, playerObject.rotation - 0.05, 0.75);
 					projectileObject.sourcePlayer = playerObject;
@@ -2753,16 +2753,16 @@ let gameLogic = (gs) => {
 					let projectileObject = createProjectile(gs, "bullet", playerObject.xPosition, playerObject.yPosition, playerObject.rotation - 0.05, 0.85);
 					projectileObject.sourcePlayer = playerObject;
 				}
-			}
+			}*/
 		}
 		if (playerObject.specialAttacking) {
-			if (playerObject.heldItem.subType === "machinegun") {
+			/*if (playerObject.heldItem.subType === "machinegun") {
 				if (playerObject.attackStun === 5) {
 					let projectileObject = createProjectile(gs, "fire_bomb_toss", playerObject.xPosition, playerObject.yPosition, playerObject.rotation, 0.7);
 					projectileObject.sourcePlayer = playerObject;
 				}
 
-			}
+			}*/
 		}
         // Update previous mouse position to the current position
         playerObject.xMousePrevPosition = playerObject.xMousePosition;
