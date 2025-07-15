@@ -3288,7 +3288,7 @@ let setupNetworkConnection = () => {
 		let socketURL;
 		if (location.href.indexOf("kramff.com") !== -1) {
 			wsProtocol = "wss://";
-			socketURL = wsProtocol + "bine.nfshost.com/fighting3dgame/";
+			socketURL = wsProtocol + "bine.nfshost.com/Fighting3Dgame/";
 		}
 		else {
 			wsProtocol = "ws://";
