@@ -989,7 +989,7 @@ let animMesh;
 let animMixer;
 
 let modelLoadList = [
-	{model: "cube_anim_test.glb", name: "cube_anim", setGeo: geo => cubeAnimGeo = geo, setAnim: anim => cubeAnimAnimation = anim},
+	{model: "cube_anim_test2.glb", name: "cube_anim", setGeo: geo => cubeAnimGeo = geo, setAnim: anim => cubeAnimAnimation = anim},
 	{model: "rock2.gltf", name: "rock", setGeo: geo => rockGeometry = geo, setMat: mat => rockMaterial = mat},
 	{model: "safe1.gltf", name: "safe", setGeo: geo => {
 		safeGeometry = geo;
@@ -1801,7 +1801,7 @@ let removeUnneededOverlays = (gs) => {
 
 let renderFrame = (gs) => {
 	if (animMixer !== undefined) {
-		animMixer.update(1/60);
+		animMixer.update(1/60/3);
 	}
 	// Create meshes for all objects if they haven't been made yet
 	// (Done here to better support rollback)

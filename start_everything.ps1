@@ -12,7 +12,7 @@ echo "Opening web browser"
 Start "C:\Program Files\Mozilla Firefox\firefox.exe" "http://localhost:8060/index.html"
 
 echo "Opening vim"
-start "C:\Program Files\Vim\vim91\gvim.exe" "Game/game.js"
+start "C:\Users\kramf\src\helix\target\release\hx.exe" "Game/game.js"
 
 echo "Opening powershell window so you can run git"
 start powershell
