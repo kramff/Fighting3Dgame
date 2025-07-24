@@ -1,8 +1,8 @@
 "use strict";
-import * as THREE from 'three';
-import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
-import {moveData} from "./moveData.js";
+import { moveData } from "./moveData.js";
 
 console.log("Fighting3DGame game");
 
@@ -62,7 +62,7 @@ let swordGeometry;
 let swordMaterial;
 
 let gunGeometry;
-let gunMaterial
+let gunMaterial;
 
 let bulletGeometry;
 let bulletMaterial;
@@ -174,25 +174,35 @@ let createGameState = () => {
 		enemyList: [],
 		plantList: [],
 		frameCount: 0,
-        gameActive: true,
-        roundWinner: undefined,
-        roundEndCountdown: 0,
-        team1Score: 0,
-        team2Score: 0,
-        gameFinished: false,
-        gameWinner: undefined,
+		gameActive: true,
+		roundWinner: undefined,
+		roundEndCountdown: 0,
+		team1Score: 0,
+		team2Score: 0,
+		gameFinished: false,
+		gameWinner: undefined,
 		testWinTeam: undefined,
 		testWinFrame: undefined,
-	}
-}
+	};
+};
 
 let copyGameState = (gs) => {
 	let gsNew = createGameState();
 	gsNew.frameCount = gs.frameCount;
 	copyGameObjectList(gsNew, gs.playerList, gsNew.playerList, createPlayer);
-	copyGameObjectList(gsNew, gs.applianceList, gsNew.applianceList, createAppliance);
+	copyGameObjectList(
+		gsNew,
+		gs.applianceList,
+		gsNew.applianceList,
+		createAppliance,
+	);
 	copyGameObjectList(gsNew, gs.itemList, gsNew.itemList, createItem);
-	copyGameObjectList(gsNew, gs.projectileList, gsNew.projectileList, createProjectile);
+	copyGameObjectList(
+		gsNew,
+		gs.projectileList,
+		gsNew.projectileList,
+		createProjectile,
+	);
 	copyGameObjectList(gsNew, gs.effectList, gsNew.effectList, createEffect);
 	copyGameObjectList(gsNew, gs.enemyList, gsNew.enemyList, createEnemy);
 	copyGameObjectList(gsNew, gs.plantList, gsNew.plantList, createPlant);
@@ -206,29 +216,62 @@ let copyGameState = (gs) => {
 	fixReferences(gsNew.playerList, "heldItem", gs.itemList, gsNew.itemList);
 	fixReferences(gsNew.applianceList, "heldItem", gs.itemList, gsNew.itemList);
 	fixReferences(gsNew.plantList, "heldItem", gs.itemList, gsNew.itemList);
-	fixReferences(gsNew.itemList, "holder", gs.playerList, gsNew.playerList, gs.applianceList, gsNew.applianceList, gs.plantList, gsNew.plantList);
-	fixReferences(gsNew.projectileList, "sourcePlayer", gs.playerList, gsNew.playerList);
-	fixReferences(gsNew.enemyList, "targetPlayer", gs.playerList, gsNew.playerList);
+	fixReferences(
+		gsNew.itemList,
+		"holder",
+		gs.playerList,
+		gsNew.playerList,
+		gs.applianceList,
+		gsNew.applianceList,
+		gs.plantList,
+		gsNew.plantList,
+	);
+	fixReferences(
+		gsNew.projectileList,
+		"sourcePlayer",
+		gs.playerList,
+		gsNew.playerList,
+	);
+	fixReferences(
+		gsNew.enemyList,
+		"targetPlayer",
+		gs.playerList,
+		gsNew.playerList,
+	);
 	return gsNew;
-}
+};
 
 let copyGameStateNoCircularRef = (gs) => {
 	let gsNew = copyGameState(gs);
-	gsNew.itemList.forEach(item => item.holder = undefined);
+	gsNew.itemList.forEach((item) => (item.holder = undefined));
 	return gsNew;
-}
+};
 
-let copyGameObjectList = (gsNew, sourceObjectList, targetObjectList, createObjFunc) => {
-	sourceObjectList.forEach(gameObject => {
+let copyGameObjectList = (
+	gsNew,
+	sourceObjectList,
+	targetObjectList,
+	createObjFunc,
+) => {
+	sourceObjectList.forEach((gameObject) => {
 		let copyObject = createObjFunc(gsNew);
-		Object.keys(gameObject).forEach(key => {
+		Object.keys(gameObject).forEach((key) => {
 			copyObject[key] = gameObject[key];
 		});
 	});
-}
+};
 
-let fixReferences = (fixObjectList, referenceKey, oldReferenceList, newReferenceList, oldReferenceListB, newReferenceListB, oldReferenceListC, newReferenceListC) => {
-	fixObjectList.forEach(gameObject => {
+let fixReferences = (
+	fixObjectList,
+	referenceKey,
+	oldReferenceList,
+	newReferenceList,
+	oldReferenceListB,
+	newReferenceListB,
+	oldReferenceListC,
+	newReferenceListC,
+) => {
+	fixObjectList.forEach((gameObject) => {
 		if (gameObject[referenceKey] !== undefined) {
 			let oldReferenceObject = gameObject[referenceKey];
 			let useListBs = false;
@@ -238,8 +281,7 @@ let fixReferences = (fixObjectList, referenceKey, oldReferenceList, newReference
 				// Main list: players, B list: appliances, C list: plants
 				if (gameObject.heldByAppliance) {
 					useListBs = true;
-				}
-				else if (gameObject.heldByPlant) {
+				} else if (gameObject.heldByPlant) {
 					useListCs = true;
 				}
 			}
@@ -248,14 +290,12 @@ let fixReferences = (fixObjectList, referenceKey, oldReferenceList, newReference
 				// Assumes the lists match order
 				let newReferenceObject = newReferenceListB[oldReferenceIndex];
 				gameObject[referenceKey] = newReferenceObject;
-			}
-			else if (useListCs) {
+			} else if (useListCs) {
 				let oldReferenceIndex = oldReferenceListC.indexOf(oldReferenceObject);
 				// Assumes the lists match order
 				let newReferenceObject = newReferenceListC[oldReferenceIndex];
 				gameObject[referenceKey] = newReferenceObject;
-			}
-			else {
+			} else {
 				let oldReferenceIndex = oldReferenceList.indexOf(oldReferenceObject);
 				// Assumes the lists match order
 				let newReferenceObject = newReferenceList[oldReferenceIndex];
@@ -263,41 +303,87 @@ let fixReferences = (fixObjectList, referenceKey, oldReferenceList, newReference
 			}
 		}
 	});
-}
+};
 
 let compareGameStates = (gs1, gs2) => {
 	// For each comparison, either add a string describing the difference, or nothing if there is no difference
 	// Overall function should return false if the game states match, or true if there is any difference
 	let comparisons = [];
-	if (gs1.frameCount !== gs2.frameCount) {comparisons.push(`frameCount diff ${gs1.frameCount} !== ${gs2.frameCount}`);}
-	if (gs1.applianceList.length !== gs2.applianceList.length) {comparisons.push(`applicationList.length diff ${gs1.applicationList.length} !== ${gs2.applicationList.length}`);}
+	if (gs1.frameCount !== gs2.frameCount) {
+		comparisons.push(`frameCount diff ${gs1.frameCount} !== ${gs2.frameCount}`);
+	}
+	if (gs1.applianceList.length !== gs2.applianceList.length) {
+		comparisons.push(
+			`applicationList.length diff ${gs1.applicationList.length} !== ${gs2.applicationList.length}`,
+		);
+	}
 	gs1.applianceList.map((object, index) => {
 		let matchingObject = gs2.applianceList[index];
 		let hasMatch = matchingObject !== undefined;
 		if (hasMatch) {
-			if (object.subType !== matchingObject.subType) {comparisons.push(`appliance.subType diff ${object.subType} !== ${matchingObject.subType}`);}
-			if (object.xPosition !== matchingObject.xPosition) {comparisons.push(`appliance.xPosition diff ${object.xPosition} !== ${matchingObject.xPosition}`);}
-			if (object.yPosition !== matchingObject.yPosition) {comparisons.push(`appliance.yPosition diff ${object.yPosition} !== ${matchingObject.yPosition}`);}
-			if (object.holdingItem !== matchingObject.holdingItem) {comparisons.push(`appliance.holdingItem diff ${object.holdingItem} !== ${matchingObject.holdingItem}`);}
-			if (object.heldItem?.subType !== matchingObject.heldItem?.subType) {comparisons.push(`appliance.heldItem.subType diff ${object.heldItem?.subType} !== ${matchingObject.heldItem?.subType}`);}
+			if (object.subType !== matchingObject.subType) {
+				comparisons.push(
+					`appliance.subType diff ${object.subType} !== ${matchingObject.subType}`,
+				);
+			}
+			if (object.xPosition !== matchingObject.xPosition) {
+				comparisons.push(
+					`appliance.xPosition diff ${object.xPosition} !== ${matchingObject.xPosition}`,
+				);
+			}
+			if (object.yPosition !== matchingObject.yPosition) {
+				comparisons.push(
+					`appliance.yPosition diff ${object.yPosition} !== ${matchingObject.yPosition}`,
+				);
+			}
+			if (object.holdingItem !== matchingObject.holdingItem) {
+				comparisons.push(
+					`appliance.holdingItem diff ${object.holdingItem} !== ${matchingObject.holdingItem}`,
+				);
+			}
+			if (object.heldItem?.subType !== matchingObject.heldItem?.subType) {
+				comparisons.push(
+					`appliance.heldItem.subType diff ${object.heldItem?.subType} !== ${matchingObject.heldItem?.subType}`,
+				);
+			}
+		} else {
+			comparisons.push(
+				`appliance in gs1 has no match in gs2 at index ${index}`,
+			);
 		}
-		else {comparisons.push(`appliance in gs1 has no match in gs2 at index ${index}`);}
 	});
-	if (gs1.itemList.length !== gs2.itemList.length) {comparisons.push(`itemList.length diff ${gs1.itemList.length} !== ${gs2.itemList.length}`);}
+	if (gs1.itemList.length !== gs2.itemList.length) {
+		comparisons.push(
+			`itemList.length diff ${gs1.itemList.length} !== ${gs2.itemList.length}`,
+		);
+	}
 	gs1.itemList.map((object, index) => {
 		let matchingObject = gs2.itemList[index];
 		let hasMatch = matchingObject !== undefined;
 		if (hasMatch) {
-			if (object.subType !== matchingObject.subType) {comparisons.push(`item.subType diff ${object.subType} !== ${matchingObject.subType}`);}
+			if (object.subType !== matchingObject.subType) {
+				comparisons.push(
+					`item.subType diff ${object.subType} !== ${matchingObject.subType}`,
+				);
+			}
+		} else {
+			comparisons.push(`item in gs1 has no match in gs2 at index ${index}`);
 		}
-		else {comparisons.push(`item in gs1 has no match in gs2 at index ${index}`);}
 	});
-	if (gs1.playerList.length !== gs2.playerList.length) {comparisons.push(`playerList.length diff ${gs1.playerList.length} !== ${gs2.playerList.length}`);}
+	if (gs1.playerList.length !== gs2.playerList.length) {
+		comparisons.push(
+			`playerList.length diff ${gs1.playerList.length} !== ${gs2.playerList.length}`,
+		);
+	}
 	gs1.playerList.map((object, index) => {
 		let matchingObject = gs2.playerList[index];
 		let hasMatch = matchingObject !== undefined;
 		if (hasMatch) {
-			if (object.id !== matchingObject.id) {comparisons.push(`player.id diff ${object.id} !== ${matchingObject.id}`);}
+			if (object.id !== matchingObject.id) {
+				comparisons.push(
+					`player.id diff ${object.id} !== ${matchingObject.id}`,
+				);
+			}
 			/*
 			if (object.upPressed !== matchingObject.upPressed) {comparisons.push(`player.upPressed diff ${object.upPressed} !== ${matchingObject.upPressed}`);}
 			if (object.rightPressed !== matchingObject.rightPressed) {comparisons.push(`player.rightPressed diff ${object.rightPressed} !== ${matchingObject.rightPressed}`);}
@@ -312,57 +398,159 @@ let compareGameStates = (gs1, gs2) => {
 			if (object.firePressed !== matchingObject.firePressed) {comparisons.push(`player.firePressed diff ${object.firePressed} !== ${matchingObject.firePressed}`);}
 			if (object.readyPressed !== matchingObject.readyPressed) {comparisons.push(`player.readyPressed diff ${object.readyPressed} !== ${matchingObject.readyPressed}`);}
 			*/
-			if (object.xPosition !== matchingObject.xPosition) {comparisons.push(`player.xPosition diff ${object.xPosition} !== ${matchingObject.xPosition}`);}
-			if (object.xSpeed !== matchingObject.xSpeed) {comparisons.push(`player.xSpeed diff ${object.xSpeed} !== ${matchingObject.xSpeed}`);}
-			if (object.yPosition !== matchingObject.yPosition) {comparisons.push(`player.yPosition diff ${object.yPosition} !== ${matchingObject.yPosition}`);}
-			if (object.ySpeed !== matchingObject.ySpeed) {comparisons.push(`player.ySpeed diff ${object.ySpeed} !== ${matchingObject.ySpeed}`);}
-			if (object.health !== matchingObject.health) {comparisons.push(`player.health diff ${object.health} !== ${matchingObject.health}`);}
-			if (object.holdingItem !== matchingObject.holdingItem) {comparisons.push(`player.holdingItem diff ${object.holdingItem} !== ${matchingObject.holdingItem}`);}
-			if (object.heldItem?.subType !== matchingObject.heldItem?.subType) {comparisons.push(`player.heldItem diff ${object.heldItem?.subType} !== ${matchingObject.heldItem?.subType}`);}
+			if (object.xPosition !== matchingObject.xPosition) {
+				comparisons.push(
+					`player.xPosition diff ${object.xPosition} !== ${matchingObject.xPosition}`,
+				);
+			}
+			if (object.xSpeed !== matchingObject.xSpeed) {
+				comparisons.push(
+					`player.xSpeed diff ${object.xSpeed} !== ${matchingObject.xSpeed}`,
+				);
+			}
+			if (object.yPosition !== matchingObject.yPosition) {
+				comparisons.push(
+					`player.yPosition diff ${object.yPosition} !== ${matchingObject.yPosition}`,
+				);
+			}
+			if (object.ySpeed !== matchingObject.ySpeed) {
+				comparisons.push(
+					`player.ySpeed diff ${object.ySpeed} !== ${matchingObject.ySpeed}`,
+				);
+			}
+			if (object.health !== matchingObject.health) {
+				comparisons.push(
+					`player.health diff ${object.health} !== ${matchingObject.health}`,
+				);
+			}
+			if (object.holdingItem !== matchingObject.holdingItem) {
+				comparisons.push(
+					`player.holdingItem diff ${object.holdingItem} !== ${matchingObject.holdingItem}`,
+				);
+			}
+			if (object.heldItem?.subType !== matchingObject.heldItem?.subType) {
+				comparisons.push(
+					`player.heldItem diff ${object.heldItem?.subType} !== ${matchingObject.heldItem?.subType}`,
+				);
+			}
+		} else {
+			comparisons.push(`player in gs1 has no match in gs2 at index ${index}`);
 		}
-		else {comparisons.push(`player in gs1 has no match in gs2 at index ${index}`);}
 	});
-	if (gs1.projectileList.length !== gs2.projectileList.length) {comparisons.push(`projectileList.length diff ${gs1.projectileList.length} !== ${gs2.projectileList.length}`);}
+	if (gs1.projectileList.length !== gs2.projectileList.length) {
+		comparisons.push(
+			`projectileList.length diff ${gs1.projectileList.length} !== ${gs2.projectileList.length}`,
+		);
+	}
 	gs1.projectileList.map((object, index) => {
 		let matchingObject = gs2.projectileList[index];
 		let hasMatch = matchingObject !== undefined;
 		if (hasMatch) {
-			if (object.subType !== matchingObject.subType) {comparisons.push(`projectile.subType diff ${object.subType} !== ${matchingObject.subType}`);}
-			if (object.xPosition !== matchingObject.xPosition) {comparisons.push(`projectile.xPosition diff ${object.xPosition} !== ${matchingObject.xPosition}`);}
-			if (object.yPosition !== matchingObject.yPosition) {comparisons.push(`projectile.yPosition diff ${object.yPosition} !== ${matchingObject.yPosition}`);}
-			if (object.sourcePlayer?.id !== matchingObject.sourcePlayer?.id) {comparisons.push(`projectile.sourcePlayer.id diff ${object.sourcePlayer.id} !== ${matchingObject.sourcePlayer.id}`);}
-			if (object.rotation !== matchingObject.rotation) {comparisons.push(`projectile.rotation diff ${object.rotation} !== ${matchingObject.rotation}`);}
-			if (object.lifespan !== matchingObject.lifespan) {comparisons.push(`projectile.lifespan diff ${object.lifespan} !== ${matchingObject.lifespan}`);}
+			if (object.subType !== matchingObject.subType) {
+				comparisons.push(
+					`projectile.subType diff ${object.subType} !== ${matchingObject.subType}`,
+				);
+			}
+			if (object.xPosition !== matchingObject.xPosition) {
+				comparisons.push(
+					`projectile.xPosition diff ${object.xPosition} !== ${matchingObject.xPosition}`,
+				);
+			}
+			if (object.yPosition !== matchingObject.yPosition) {
+				comparisons.push(
+					`projectile.yPosition diff ${object.yPosition} !== ${matchingObject.yPosition}`,
+				);
+			}
+			if (object.sourcePlayer?.id !== matchingObject.sourcePlayer?.id) {
+				comparisons.push(
+					`projectile.sourcePlayer.id diff ${object.sourcePlayer.id} !== ${matchingObject.sourcePlayer.id}`,
+				);
+			}
+			if (object.rotation !== matchingObject.rotation) {
+				comparisons.push(
+					`projectile.rotation diff ${object.rotation} !== ${matchingObject.rotation}`,
+				);
+			}
+			if (object.lifespan !== matchingObject.lifespan) {
+				comparisons.push(
+					`projectile.lifespan diff ${object.lifespan} !== ${matchingObject.lifespan}`,
+				);
+			}
+		} else {
+			comparisons.push(
+				`projectile in gs1 has no match in gs2 at index ${index}`,
+			);
 		}
-		else {comparisons.push(`projectile in gs1 has no match in gs2 at index ${index}`);}
 	});
 	// Ignoring effect list
 	//gameState1.effectList.map((object, index) => {
-		//return true;
+	//return true;
 	//}),
-	if (gs1.enemyList.length !== gs2.enemyList.length) {comparisons.push(`enemyList.length diff ${gs1.enemyList.length} !== ${gs2.enemyList.length}`);}
+	if (gs1.enemyList.length !== gs2.enemyList.length) {
+		comparisons.push(
+			`enemyList.length diff ${gs1.enemyList.length} !== ${gs2.enemyList.length}`,
+		);
+	}
 	gs1.enemyList.map((object, index) => {
 		let matchingObject = gs2.enemyList[index];
 		let hasMatch = matchingObject !== undefined;
 		if (hasMatch) {
-			if (object.subType !== matchingObject.subType) {comparisons.push(`enemy.subType diff ${object.subType} !== ${matchingObject.subType}`);}
-			if (object.xPosition !== matchingObject.xPosition) {comparisons.push(`enemy.xPosition diff ${object.xPosition} !== ${matchingObject.xPosition}`);}
-			if (object.yPosition !== matchingObject.yPosition) {comparisons.push(`enemy.yPosition diff ${object.yPosition} !== ${matchingObject.yPosition}`);}
-			if (object.rotation !== matchingObject.rotation) {comparisons.push(`enemy.rotation diff ${object.rotation} !== ${matchingObject.rotation}`);}
+			if (object.subType !== matchingObject.subType) {
+				comparisons.push(
+					`enemy.subType diff ${object.subType} !== ${matchingObject.subType}`,
+				);
+			}
+			if (object.xPosition !== matchingObject.xPosition) {
+				comparisons.push(
+					`enemy.xPosition diff ${object.xPosition} !== ${matchingObject.xPosition}`,
+				);
+			}
+			if (object.yPosition !== matchingObject.yPosition) {
+				comparisons.push(
+					`enemy.yPosition diff ${object.yPosition} !== ${matchingObject.yPosition}`,
+				);
+			}
+			if (object.rotation !== matchingObject.rotation) {
+				comparisons.push(
+					`enemy.rotation diff ${object.rotation} !== ${matchingObject.rotation}`,
+				);
+			}
+		} else {
+			comparisons.push(`enemy in gs1 has no match in gs2 at index ${index}`);
 		}
-		else {comparisons.push(`enemy in gs1 has no match in gs2 at index ${index}`);}
 	});
-	if (gs1.plantList.length !== gs2.plantList.length) {comparisons.push(`plantList.length diff ${gs1.plantList.length} !== ${gs2.plantList.length}`);}
+	if (gs1.plantList.length !== gs2.plantList.length) {
+		comparisons.push(
+			`plantList.length diff ${gs1.plantList.length} !== ${gs2.plantList.length}`,
+		);
+	}
 	gs1.plantList.map((object, index) => {
 		let matchingObject = gs2.plantList[index];
 		let hasMatch = matchingObject !== undefined;
 		if (hasMatch) {
-			if (object.subType !== matchingObject.subType) {comparisons.push(`plant.subType diff ${object.subType} !== ${matchingObject.subType}`);}
-			if (object.xPosition !== matchingObject.xPosition) {comparisons.push(`plant.xPosition diff ${object.xPosition} !== ${matchingObject.xPosition}`);}
-			if (object.yPosition !== matchingObject.yPosition) {comparisons.push(`plant.yPosition diff ${object.yPosition} !== ${matchingObject.yPosition}`);}
-			if (object.rotation !== matchingObject.rotation) {comparisons.push(`plant.rotation diff ${object.rotation} !== ${matchingObject.rotation}`);}
+			if (object.subType !== matchingObject.subType) {
+				comparisons.push(
+					`plant.subType diff ${object.subType} !== ${matchingObject.subType}`,
+				);
+			}
+			if (object.xPosition !== matchingObject.xPosition) {
+				comparisons.push(
+					`plant.xPosition diff ${object.xPosition} !== ${matchingObject.xPosition}`,
+				);
+			}
+			if (object.yPosition !== matchingObject.yPosition) {
+				comparisons.push(
+					`plant.yPosition diff ${object.yPosition} !== ${matchingObject.yPosition}`,
+				);
+			}
+			if (object.rotation !== matchingObject.rotation) {
+				comparisons.push(
+					`plant.rotation diff ${object.rotation} !== ${matchingObject.rotation}`,
+				);
+			}
+		} else {
+			comparisons.push(`plant in gs1 has no match in gs2 at index ${index}`);
 		}
-		else {comparisons.push(`plant in gs1 has no match in gs2 at index ${index}`);}
 	});
 	comparisons = comparisons.flat(1);
 	// Any truthy value means there was a difference. (the truthy value would be a string)
@@ -378,7 +566,7 @@ let compareGameStates = (gs1, gs2) => {
 		debugger;
 	}
 	return overallResult;
-}
+};
 
 let currentGameState;
 let gameStateHistory = [];
@@ -479,8 +667,44 @@ let createPlayer = (gs, name, id, team) => {
 		readyReleased: false,
 		specialReleased: false,*/
 		gamepadAxes: [0, 0, 0, 0],
-		gamepadButtons: [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-		releasedButtons: [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
+		gamepadButtons: [
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+		],
+		releasedButtons: [
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+		],
 		// Graphics
 		connectedMesh: undefined,
 		connectedOverlayObjects: {},
@@ -493,7 +717,7 @@ let createPlayer = (gs, name, id, team) => {
 	};
 	gs.playerList.push(newPlayer);
 	return newPlayer;
-}
+};
 let resetPlayerObject = (playerObject) => {
 	playerObject.xPosition = playerObject.xStartPosition;
 	playerObject.yPosition = playerObject.yStartPosition;
@@ -524,7 +748,7 @@ let resetPlayerObject = (playerObject) => {
 	playerObject.grounded = false;
 	// Combat timing / stuns
 	playerObject.attackStun = 0;
-	playerObject.blockStun = 0
+	playerObject.blockStun = 0;
 	playerObject.hitStun = 0;
 	playerObject.staggerStun = 0;
 	playerObject.knockdownStun = 0;
@@ -563,13 +787,12 @@ let resetPlayerObject = (playerObject) => {
 	*/
 	// Defeated
 	playerObject.defeated = false;
-}
+};
 let createPlayerMesh = (playerObject) => {
 	let matToUse = playerMaterial;
 	if (playerObject.team === 1) {
 		matToUse = playerTeam1Material;
-	}
-	else if (playerObject.team === 2) {
+	} else if (playerObject.team === 2) {
 		matToUse = playerTeam2Material;
 	}
 	let playerMesh = new THREE.Mesh(cubeGeometry, matToUse);
@@ -582,10 +805,10 @@ let createPlayerMesh = (playerObject) => {
 	// Add player's mesh to mesh list
 	playerMeshList.push(playerMesh);
 	return playerMesh;
-}
+};
 let removePlayer = (gs, playerObject) => {
 	gs.playerList.splice(gs.playerList.indexOf(playerObject), 1);
-}
+};
 
 let createAppliance = (gs, applianceType, xPosition, yPosition, zPosition) => {
 	let newAppliance = {
@@ -606,7 +829,7 @@ let createAppliance = (gs, applianceType, xPosition, yPosition, zPosition) => {
 	};
 	gs.applianceList.push(newAppliance);
 	return newAppliance;
-}
+};
 let createApplianceMesh = (applianceObject) => {
 	let applianceMesh;
 	if (applianceObject.subType === "wall") {
@@ -614,24 +837,20 @@ let createApplianceMesh = (applianceObject) => {
 		applianceObject.regularMat = wallMaterial;
 		applianceObject.highlightMat = wallMaterial;
 		//applianceMesh.scale.z = 2;
-	}
-	else if (applianceObject.subType === "table") {
+	} else if (applianceObject.subType === "table") {
 		applianceMesh = new THREE.Mesh(cubeGeometry, tableMaterial);
 		applianceObject.regularMat = tableMaterial;
 		applianceObject.highlightMat = tableMaterialHighlight;
-	}
-	else if (applianceObject.subType === "supply") {
+	} else if (applianceObject.subType === "supply") {
 		applianceMesh = new THREE.Mesh(cubeGeometry, supplyMaterial);
 		applianceObject.regularMat = supplyMaterial;
 		applianceObject.highlightMat = supplyMaterialHighlight;
-	}
-	else if (applianceObject.subType === "safe") {
+	} else if (applianceObject.subType === "safe") {
 		applianceMesh = new THREE.Mesh(safeGeometry, safeMaterial);
 		//applianceMesh.scale.multiplyScalar(0.5);
 		applianceObject.regularMat = safeMaterial;
 		applianceObject.highlightMat = safeMaterialHighlight;
-	}
-	else {
+	} else {
 		console.log("appliance type missing: " + applianceObject.subType);
 		applianceMesh = new THREE.Mesh(cubeGeometry, tableMaterial);
 	}
@@ -640,10 +859,10 @@ let createApplianceMesh = (applianceObject) => {
 	scene.add(applianceMesh);
 	applianceMeshList.push(applianceMesh);
 	return applianceMesh;
-}
+};
 let removeAppliance = (gs, applianceObject) => {
 	gs.applianceList.splice(gs.applianceList.indexOf(applianceObject), 1);
-}
+};
 
 let createItem = (gs, itemType) => {
 	let newItem = {
@@ -663,9 +882,16 @@ let createItem = (gs, itemType) => {
 		hasAbility: false,
 		toBeRemoved: false,
 	};
-	if (itemType === "sword" || itemType === "gun" || itemType === "ball" || itemType === "fireBomb" || itemType === "rapier" || itemType === "machinegun") {
+	if (
+		itemType === "sword" ||
+		itemType === "gun" ||
+		itemType === "ball" ||
+		itemType === "fireBomb" ||
+		itemType === "rapier" ||
+		itemType === "machinegun"
+	) {
 		newItem.fixedRotation = false;
-		newItem.initialRotation = - Math.PI / 2;
+		newItem.initialRotation = -Math.PI / 2;
 		newItem.hasAbility = true;
 	}
 	if (itemType === "seed" || itemType === "pollenSampler") {
@@ -676,62 +902,45 @@ let createItem = (gs, itemType) => {
 	}
 	gs.itemList.push(newItem);
 	return newItem;
-}
+};
 let createItemMesh = (itemObject) => {
 	let newItemMesh;
 	if (itemObject.subType === "sword") {
 		newItemMesh = new THREE.Mesh(swordGeometry, swordMaterial);
-	}
-	else if (itemObject.subType === "gun") {
+	} else if (itemObject.subType === "gun") {
 		newItemMesh = new THREE.Mesh(gunGeometry, gunMaterial);
-	}
-	else if (itemObject.subType === "bullet") {
+	} else if (itemObject.subType === "bullet") {
 		newItemMesh = new THREE.Mesh(bulletGeometry, bulletMaterial);
-	}
-	else if (itemObject.subType === "ball") {
+	} else if (itemObject.subType === "ball") {
 		newItemMesh = new THREE.Mesh(ballGeometry, ballMaterial);
-	}
-	else if (itemObject.subType === "herb") {
+	} else if (itemObject.subType === "herb") {
 		newItemMesh = new THREE.Mesh(herbGeometry, herbMaterial);
-	}
-	else if (itemObject.subType === "rock") {
+	} else if (itemObject.subType === "rock") {
 		newItemMesh = new THREE.Mesh(rockGeometry, rockMaterial);
 		newItemMesh.scale.multiplyScalar(0.3);
-	}
-	else if (itemObject.subType === "powder") {
+	} else if (itemObject.subType === "powder") {
 		newItemMesh = new THREE.Mesh(powderGeometry, powderMaterial);
-	}
-	else if (itemObject.subType === "seedSampler") {
+	} else if (itemObject.subType === "seedSampler") {
 		newItemMesh = new THREE.Mesh(seedSamplerGeometry, seedSamplerMaterial);
-	}
-	else if (itemObject.subType === "pollenSampler") {
+	} else if (itemObject.subType === "pollenSampler") {
 		newItemMesh = new THREE.Mesh(pollenSamplerGeometry, pollenSamplerMaterial);
-	}
-	else if (itemObject.subType === "seed") {
+	} else if (itemObject.subType === "seed") {
 		newItemMesh = new THREE.Mesh(seedGeometry, seedMaterial);
-	}
-	else if (itemObject.subType === "fertilizer") {
+	} else if (itemObject.subType === "fertilizer") {
 		newItemMesh = new THREE.Mesh(fertilizerGeometry, fertilizerMaterial);
-	}
-	else if (itemObject.subType === "water") {
+	} else if (itemObject.subType === "water") {
 		newItemMesh = new THREE.Mesh(waterGeometry, waterMaterial);
-	}
-	else if (itemObject.subType === "blood") {
+	} else if (itemObject.subType === "blood") {
 		newItemMesh = new THREE.Mesh(bloodGeometry, bloodMaterial);
-	}
-	else if (itemObject.subType === "ichor") {
+	} else if (itemObject.subType === "ichor") {
 		newItemMesh = new THREE.Mesh(ichorGeometry, ichorMaterial);
-	}
-	else if (itemObject.subType === "fireBomb") {
+	} else if (itemObject.subType === "fireBomb") {
 		newItemMesh = new THREE.Mesh(fireBombGeometry, fireBombMaterial);
-	}
-	else if (itemObject.subType === "rapier") {
+	} else if (itemObject.subType === "rapier") {
 		newItemMesh = new THREE.Mesh(rapierGeometry, rapierMaterial);
-	}
-	else if (itemObject.subType === "machinegun") {
+	} else if (itemObject.subType === "machinegun") {
 		newItemMesh = new THREE.Mesh(machinegunGeometry, machinegunMaterial);
-	}
-	else {
+	} else {
 		console.log("item type missing: " + itemObject.subType);
 		newItemMesh = new THREE.Mesh(sphereGeometry, itemMaterial);
 	}
@@ -740,12 +949,19 @@ let createItemMesh = (itemObject) => {
 	scene.add(newItemMesh);
 	itemMeshList.push(newItemMesh);
 	return newItemMesh;
-}
+};
 let removeItem = (gs, itemObject) => {
 	gs.itemList.splice(gs.itemList.indexOf(itemObject), 1);
-}
+};
 
-let createProjectile = (gs, projectileType, xPosition, yPosition, rotation, speed) => {
+let createProjectile = (
+	gs,
+	projectileType,
+	xPosition,
+	yPosition,
+	rotation,
+	speed,
+) => {
 	let newProjectile = {
 		type: "projectile",
 		subType: projectileType,
@@ -769,53 +985,42 @@ let createProjectile = (gs, projectileType, xPosition, yPosition, rotation, spee
 	}
 	gs.projectileList.push(newProjectile);
 	return newProjectile;
-}
+};
 let createProjectileMesh = (projectileObject) => {
 	let newProjectileMesh;
 	if (projectileObject.subType === "machinegun_light") {
 		newProjectileMesh = new THREE.Mesh(bulletGeometry, bulletMaterial);
-	}
-	else if (projectileObject.subType === "machinegun_medium") {
+	} else if (projectileObject.subType === "machinegun_medium") {
 		newProjectileMesh = new THREE.Mesh(bulletGeometry, bulletMaterial);
-	}
-	else if (projectileObject.subType === "machinegun_special") {
+	} else if (projectileObject.subType === "machinegun_special") {
 		newProjectileMesh = new THREE.Mesh(bulletGeometry, bulletMaterial);
-	}
-	else if (projectileObject.subType === "rapier_light") {
+	} else if (projectileObject.subType === "rapier_light") {
 		newProjectileMesh = new THREE.Mesh(bulletGeometry, bulletMaterial);
-	}
-	else if (projectileObject.subType === "rapier_medium") {
+	} else if (projectileObject.subType === "rapier_medium") {
 		newProjectileMesh = new THREE.Mesh(bulletGeometry, bulletMaterial);
-	}
-	else if (projectileObject.subType === "rapier_special") {
+	} else if (projectileObject.subType === "rapier_special") {
 		newProjectileMesh = new THREE.Mesh(bulletGeometry, bulletMaterial);
-	}
-	else if (projectileObject.subType === "bullet") {
+	} else if (projectileObject.subType === "bullet") {
 		newProjectileMesh = new THREE.Mesh(bulletGeometry, bulletMaterial);
-	}
-	else if (projectileObject.subType === "thrownBall") {
+	} else if (projectileObject.subType === "thrownBall") {
 		newProjectileMesh = new THREE.Mesh(ballGeometry, ballMaterial);
-	}
-	else if (projectileObject.subType === "swordSwing") {
+	} else if (projectileObject.subType === "swordSwing") {
 		newProjectileMesh = new THREE.Mesh(swordGeometry, swordMaterial);
-	}
-	else if (projectileObject.subType === "fire_bomb_toss") {
+	} else if (projectileObject.subType === "fire_bomb_toss") {
 		newProjectileMesh = new THREE.Mesh(fireBombGeometry, fireBombMaterial);
-	}
-	else if (projectileObject.subType === "fire_bomb_explosion") {
+	} else if (projectileObject.subType === "fire_bomb_explosion") {
 		newProjectileMesh = new THREE.Mesh(hitEffectGeometry, fireBombMaterial);
-	}
-	else {
+	} else {
 		console.log("projectile type missing: " + projectileObject.subType);
 		newProjectileMesh = new THREE.Mesh(bulletGeometry, bulletMaterial);
 	}
 	scene.add(newProjectileMesh);
 	projectileMeshList.push(newProjectileMesh);
 	return newProjectileMesh;
-}
+};
 let removeProjectile = (gs, projectileObject) => {
 	gs.projectileList.splice(gs.projectileList.indexOf(projectileObject), 1);
-}
+};
 
 let createEffect = (gs, effectType, xPosition, yPosition) => {
 	let newEffect = {
@@ -831,7 +1036,7 @@ let createEffect = (gs, effectType, xPosition, yPosition) => {
 	};
 	gs.effectList.push(newEffect);
 	return newEffect;
-}
+};
 let createEffectMesh = (effectObject) => {
 	let newEffectMesh;
 	if (effectObject.subType === "hit") {
@@ -840,10 +1045,10 @@ let createEffectMesh = (effectObject) => {
 	scene.add(newEffectMesh);
 	effectMeshList.push(newEffectMesh);
 	return newEffectMesh;
-}
+};
 let removeEffect = (gs, effectObject) => {
 	gs.effectList.splice(gs.effectList.indexOf(effectObject), 1);
-}
+};
 
 let createEnemy = (gs, enemyType, xPosition, yPosition) => {
 	let newEnemy = {
@@ -873,30 +1078,29 @@ let createEnemy = (gs, enemyType, xPosition, yPosition) => {
 	};
 	gs.enemyList.push(newEnemy);
 	return newEnemy;
-}
+};
 let createEnemyMesh = (enemyObject) => {
 	let newEnemyMesh;
 	if (enemyObject.subType === "enemy1") {
 		newEnemyMesh = new THREE.Mesh(cubeGeometry, enemy1Material);
-	}
-	else {
+	} else {
 		newEnemyMesh = new THREE.Mesh(cubeGeometry, enemy1Material);
 	}
 	scene.add(newEnemyMesh);
 	enemyMeshList.push(newEnemyMesh);
 	return newEnemyMesh;
-}
+};
 let removeEnemy = (gs, enemyObject) => {
 	gs.enemyList.splice(gs.enemyList.indexOf(enemyObject), 1);
-}
+};
 
 let getBlankGenome = () => {
 	return {
 		geneticPower: 10,
 		makesSword: false,
 		makesFireBomb: false,
-	}
-}
+	};
+};
 
 let createPlant = (gs, plantType, xPosition, yPosition) => {
 	let newPlant = {
@@ -923,22 +1127,21 @@ let createPlant = (gs, plantType, xPosition, yPosition) => {
 	};
 	gs.plantList.push(newPlant);
 	return newPlant;
-}
+};
 let createPlantMesh = (plantObject) => {
 	let newPlantMesh;
 	if (plantObject.subType === "plant1") {
 		newPlantMesh = new THREE.Mesh(cubeGeometry, plant1Material);
-	}
-	else {
+	} else {
 		newPlantMesh = new THREE.Mesh(cubeGeometry, plant1Material);
 	}
 	scene.add(newPlantMesh);
 	plantMeshList.push(newPlantMesh);
 	return newPlantMesh;
-}
+};
 let removePlant = (gs, plantObject) => {
 	gs.plantList.splice(gs.plantList.indexOf(plantObject), 1);
-}
+};
 
 // Keys
 let wDown = false;
@@ -989,33 +1192,62 @@ let animMesh;
 let animMixer;
 
 let modelLoadList = [
-	{model: "cube_anim_test2.glb", name: "cube_anim", setGeo: geo => cubeAnimGeo = geo, setAnim: anim => cubeAnimAnimation = anim},
-	{model: "rock2.gltf", name: "rock", setGeo: geo => rockGeometry = geo, setMat: mat => rockMaterial = mat},
-	{model: "safe1.gltf", name: "safe", setGeo: geo => {
-		safeGeometry = geo;
-		safeGeometry.scale(0.6, 0.6, 0.6);
-		safeGeometry.rotateX(Math.PI / 2);
-		safeGeometry.rotateZ(-Math.PI / 2);
-	}},
-	{model: "machinegun.glb", name: "machinegun", setGeo: geo => {
-		machinegunGeometry = geo;
-		machinegunGeometry.rotateX(Math.PI / 2);
-		machinegunGeometry.rotateZ(Math.PI / 2);
-		//machinegunGeometry.rotateY(-Math.PI / 2);
-	}},
-	{model: "rapier.glb", name: "rapier", setGeo: geo => {
-		rapierGeometry = geo;
-		rapierGeometry.rotateX(-Math.PI / 2);
-		rapierGeometry.rotateZ(-Math.PI / 3);
-	}},
+	{
+		model: "cube_anim_test2.glb",
+		name: "cube_anim",
+		setGeo: (geo) => (cubeAnimGeo = geo),
+		setAnim: (anim) => (cubeAnimAnimation = anim),
+	},
+	{
+		model: "rock2.gltf",
+		name: "rock",
+		setGeo: (geo) => (rockGeometry = geo),
+		setMat: (mat) => (rockMaterial = mat),
+	},
+	{
+		model: "safe1.gltf",
+		name: "safe",
+		setGeo: (geo) => {
+			safeGeometry = geo;
+			safeGeometry.scale(0.6, 0.6, 0.6);
+			safeGeometry.rotateX(Math.PI / 2);
+			safeGeometry.rotateZ(-Math.PI / 2);
+		},
+	},
+	{
+		model: "machinegun.glb",
+		name: "machinegun",
+		setGeo: (geo) => {
+			machinegunGeometry = geo;
+			machinegunGeometry.rotateX(Math.PI / 2);
+			machinegunGeometry.rotateZ(Math.PI / 2);
+			//machinegunGeometry.rotateY(-Math.PI / 2);
+		},
+	},
+	{
+		model: "rapier.glb",
+		name: "rapier",
+		setGeo: (geo) => {
+			rapierGeometry = geo;
+			rapierGeometry.rotateX(-Math.PI / 2);
+			rapierGeometry.rotateZ(-Math.PI / 3);
+		},
+	},
+	{
+		model: "Low-Poly-Base_copy.glb",
+		name: "player_model",
+		setLoad: (load) => {
+			// Load model
+		},
+	},
 ];
 
 let init = () => {
-
 	glTFLoader = new GLTFLoader();
 
-	modelLoadList.forEach(loadItem => {
-		glTFLoader.load(`models/${loadItem.model}`,
+	modelLoadList.forEach((loadItem) => {
+		glTFLoader.load(
+			`models/${loadItem.model}`,
 			(gltf) => {
 				if (loadItem.setGeo !== undefined) {
 					loadItem.setGeo(gltf.scene.children[0].geometry);
@@ -1027,12 +1259,13 @@ let init = () => {
 					loadItem.setAnim(gltf.animations[0]);
 					cubeAnimGltf = gltf;
 				}
+				if (loadItem.setLoad !== undefined) {
+					scene.add(gltf.scene);
+				}
 				console.log(`${loadItem.name} model loaded`);
 			},
-			(xhr) => {
-			},
-			(err) => {
-			}
+			(xhr) => {},
+			(err) => {},
 		);
 	});
 
@@ -1043,11 +1276,13 @@ let init = () => {
 	missingMeshCreatedSpan = document.getElementById("missing_mesh_created");
 	unneededMeshRemovedSpan = document.getElementById("unneeded_mesh_removed");
 
-    gameStatusMessageSpan = document.getElementById("game_status_message");
-    team1ScoreSpan = document.getElementById("team_1_score");
-    team2ScoreSpan = document.getElementById("team_2_score");
+	gameStatusMessageSpan = document.getElementById("game_status_message");
+	team1ScoreSpan = document.getElementById("team_1_score");
+	team2ScoreSpan = document.getElementById("team_2_score");
 
-	backgroundOverGame = document.getElementsByClassName("background_over_game").item(0);
+	backgroundOverGame = document
+		.getElementsByClassName("background_over_game")
+		.item(0);
 	roomListElement = document.getElementById("room_list");
 	teamBox1 = document.getElementById("team_1");
 	teamBox2 = document.getElementById("team_2");
@@ -1066,35 +1301,40 @@ let init = () => {
 	nicknameInput.oninput = (e) => {
 		nickname = nicknameInput.value;
 		localStorage.setItem("fighting3dgame__nickname", nickname);
-	}
+	};
 
 	makeRoomButton = document.getElementById("make_room");
 	makeRoomButton.onclick = (e) => {
 		goToView("waiting");
-		sendData("makeRoom", {roomName: `${nickname}'s room`, playerName: nickname});
-	}
+		sendData("makeRoom", {
+			roomName: `${nickname}'s room`,
+			playerName: nickname,
+		});
+	};
 
 	leaveRoomButton = document.getElementById("leave_room");
 	leaveRoomButton.onclick = (e) => {
 		goToView("entry");
 		sendData("leaveRoom", 0);
-		document.querySelectorAll(".player_entry").forEach(playerEntry => playerEntry.remove());
-	}
+		document
+			.querySelectorAll(".player_entry")
+			.forEach((playerEntry) => playerEntry.remove());
+	};
 
 	joinTeam1Button = document.getElementById("join_team_1");
 	joinTeam1Button.onclick = (e) => {
 		sendData("switchTeam", 1);
-	}
+	};
 
 	joinTeam2Button = document.getElementById("join_team_2");
 	joinTeam2Button.onclick = (e) => {
 		sendData("switchTeam", 2);
-	}
+	};
 
 	startGameButton = document.getElementById("start_game");
 	startGameButton.onclick = (e) => {
 		sendData("startGame", 0);
-	}
+	};
 
 	pauseGameButton = document.getElementById("pause_game");
 	pauseGameButton.onclick = (e) => {
@@ -1102,47 +1342,56 @@ let init = () => {
 		if (gamePaused) {
 			sendData("pauseGame", currentFrameCount);
 			pauseGameButton.textContent = "Resume Game";
-		}
-		else {
+		} else {
 			sendData("resumeGame", currentFrameCount);
 			pauseGameButton.textContent = "Pause Game";
 		}
-	}
+	};
 
 	hitBreakpointButton = document.getElementById("hit_breakpoint");
 	hitBreakpointButton.onclick = (e) => {
 		debugger;
-	}
+	};
 
 	desyncToolButton = document.getElementById("run_desync_tool");
 	desyncToolButton.onclick = (e) => {
 		sendData("desyncTool", 0);
-	}
+	};
 
 	team1WinButton = document.getElementById("test_team_1_win");
 	team1WinButton.onclick = (e) => {
-		sendData("test_team_win", {team:1, frameCount: currentGameState.frameCount + 30});
-	}
+		sendData("test_team_win", {
+			team: 1,
+			frameCount: currentGameState.frameCount + 30,
+		});
+	};
 
 	team2WinButton = document.getElementById("test_team_2_win");
 	team2WinButton.onclick = (e) => {
-		sendData("test_team_win", {team:2, frameCount: currentGameState.frameCount + 30});
-	}
+		sendData("test_team_win", {
+			team: 2,
+			frameCount: currentGameState.frameCount + 30,
+		});
+	};
 
 	testRollbackButton = document.getElementById("test_rollback");
 	testRollbackButton.onclick = (e) => {
 		testingRollback = !testingRollback;
 		if (testingRollback) {
 			testRollbackButton.textContent = "Test rollback (on: inputs -10 frames)";
-		}
-		else {
+		} else {
 			testRollbackButton.textContent = "Test rollback (off: inputs +3 frames)";
 		}
-	}
+	};
 
 	//nicknameInput.oninput
 	scene = new THREE.Scene();
-	camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+	camera = new THREE.PerspectiveCamera(
+		45,
+		window.innerWidth / window.innerHeight,
+		0.1,
+		1000,
+	);
 	camera.position.z = 10;
 	camera.up = new THREE.Vector3(0, 0, 1);
 	renderer = new THREE.WebGLRenderer();
@@ -1176,54 +1425,54 @@ let init = () => {
 	fireBombGeometry = new THREE.CapsuleGeometry(0.1, 0.2, 2, 7);
 
 	// Materials
-	playerMaterial = new THREE.MeshToonMaterial({color: 0x22ff22});
-	playerTeam1Material = new THREE.MeshToonMaterial({color: 0xff7777});
-	playerTeam1DefeatedMaterial = new THREE.MeshToonMaterial({color: 0xff7777});
+	playerMaterial = new THREE.MeshToonMaterial({ color: 0x22ff22 });
+	playerTeam1Material = new THREE.MeshToonMaterial({ color: 0xff7777 });
+	playerTeam1DefeatedMaterial = new THREE.MeshToonMaterial({ color: 0xff7777 });
 	playerTeam1DefeatedMaterial.transparent = true;
 	playerTeam1DefeatedMaterial.opacity = 0.3;
-	playerTeam2Material = new THREE.MeshToonMaterial({color: 0x77ff77});
-	playerTeam2DefeatedMaterial = new THREE.MeshToonMaterial({color: 0x77ff77});
+	playerTeam2Material = new THREE.MeshToonMaterial({ color: 0x77ff77 });
+	playerTeam2DefeatedMaterial = new THREE.MeshToonMaterial({ color: 0x77ff77 });
 	playerTeam2DefeatedMaterial.transparent = true;
 	playerTeam2DefeatedMaterial.opacity = 0.3;
-	floorMaterial = new THREE.MeshToonMaterial({color: 0x504030});
-	wallMaterial = new THREE.MeshToonMaterial({color: 0x909090});
+	floorMaterial = new THREE.MeshToonMaterial({ color: 0x504030 });
+	wallMaterial = new THREE.MeshToonMaterial({ color: 0x909090 });
 	//wallMaterial.shadowSide = THREE.DoubleSide;
-	wallMaterialHighlight = new THREE.MeshToonMaterial({color: 0x909090});
-	tableMaterial = new THREE.MeshToonMaterial({color: 0xccaa22});
-	tableMaterialHighlight = new THREE.MeshToonMaterial({color: 0xddbb33});
-	supplyMaterial = new THREE.MeshToonMaterial({color: 0xaa99cc});
-	supplyMaterialHighlight = new THREE.MeshToonMaterial({color: 0xbbaadd});
-	itemMaterial = new THREE.MeshToonMaterial({color: 0x2266dd});
-	itemMaterial2 = new THREE.MeshToonMaterial({color: 0xdd2266});
-	progressMaterial = new THREE.MeshToonMaterial({color: 0x33ffbb});
+	wallMaterialHighlight = new THREE.MeshToonMaterial({ color: 0x909090 });
+	tableMaterial = new THREE.MeshToonMaterial({ color: 0xccaa22 });
+	tableMaterialHighlight = new THREE.MeshToonMaterial({ color: 0xddbb33 });
+	supplyMaterial = new THREE.MeshToonMaterial({ color: 0xaa99cc });
+	supplyMaterialHighlight = new THREE.MeshToonMaterial({ color: 0xbbaadd });
+	itemMaterial = new THREE.MeshToonMaterial({ color: 0x2266dd });
+	itemMaterial2 = new THREE.MeshToonMaterial({ color: 0xdd2266 });
+	progressMaterial = new THREE.MeshToonMaterial({ color: 0x33ffbb });
 	// More materials
-	swordMaterial = new THREE.MeshToonMaterial({color: 0x90909a});
-	gunMaterial = new THREE.MeshToonMaterial({color: 0x6f7064});
-	bulletMaterial = new THREE.MeshToonMaterial({color: 0xc6a039});
-	ballMaterial = new THREE.MeshToonMaterial({color: 0xdf202f});
-	herbMaterial = new THREE.MeshToonMaterial({color: 0x10c040});
-	powderMaterial = new THREE.MeshToonMaterial({color: 0x60a080});
+	swordMaterial = new THREE.MeshToonMaterial({ color: 0x90909a });
+	gunMaterial = new THREE.MeshToonMaterial({ color: 0x6f7064 });
+	bulletMaterial = new THREE.MeshToonMaterial({ color: 0xc6a039 });
+	ballMaterial = new THREE.MeshToonMaterial({ color: 0xdf202f });
+	herbMaterial = new THREE.MeshToonMaterial({ color: 0x10c040 });
+	powderMaterial = new THREE.MeshToonMaterial({ color: 0x60a080 });
 	//rockMaterial = new THREE.MeshToonMaterial({color: 0x994433});
-	hitEffectMaterial = new THREE.MeshToonMaterial({color: 0xffffff});
-	safeMaterial = new THREE.MeshToonMaterial({color: 0x444444});
-	safeMaterialHighlight = new THREE.MeshToonMaterial({color: 0x555555});
-	enemy1Material = new THREE.MeshToonMaterial({color: 0x707070});
-	enemy1AttackMaterial = new THREE.MeshToonMaterial({color: 0x909070});
-	enemy1StunnedMaterial = new THREE.MeshToonMaterial({color: 0x8090a0});
-	enemy1AngryMaterial = new THREE.MeshToonMaterial({color: 0xa09080});
-	plant1Material = new THREE.MeshToonMaterial({color: 0x309010});
+	hitEffectMaterial = new THREE.MeshToonMaterial({ color: 0xffffff });
+	safeMaterial = new THREE.MeshToonMaterial({ color: 0x444444 });
+	safeMaterialHighlight = new THREE.MeshToonMaterial({ color: 0x555555 });
+	enemy1Material = new THREE.MeshToonMaterial({ color: 0x707070 });
+	enemy1AttackMaterial = new THREE.MeshToonMaterial({ color: 0x909070 });
+	enemy1StunnedMaterial = new THREE.MeshToonMaterial({ color: 0x8090a0 });
+	enemy1AngryMaterial = new THREE.MeshToonMaterial({ color: 0xa09080 });
+	plant1Material = new THREE.MeshToonMaterial({ color: 0x309010 });
 	// More materials 2
-	seedSamplerMaterial = new THREE.MeshToonMaterial({color: 0x50a070});
-	pollenSamplerMaterial = new THREE.MeshToonMaterial({color: 0xd0a010});
-	seedMaterial = new THREE.MeshToonMaterial({color: 0xa08020});
-	fertilizerMaterial = new THREE.MeshToonMaterial({color: 0x305020});
-	waterMaterial = new THREE.MeshToonMaterial({color: 0x6080f8});
-	bloodMaterial = new THREE.MeshToonMaterial({color: 0xe03040});
-	ichorMaterial = new THREE.MeshToonMaterial({color: 0xf0f090});
-	fireBombMaterial = new THREE.MeshToonMaterial({color: 0xf84010});
+	seedSamplerMaterial = new THREE.MeshToonMaterial({ color: 0x50a070 });
+	pollenSamplerMaterial = new THREE.MeshToonMaterial({ color: 0xd0a010 });
+	seedMaterial = new THREE.MeshToonMaterial({ color: 0xa08020 });
+	fertilizerMaterial = new THREE.MeshToonMaterial({ color: 0x305020 });
+	waterMaterial = new THREE.MeshToonMaterial({ color: 0x6080f8 });
+	bloodMaterial = new THREE.MeshToonMaterial({ color: 0xe03040 });
+	ichorMaterial = new THREE.MeshToonMaterial({ color: 0xf0f090 });
+	fireBombMaterial = new THREE.MeshToonMaterial({ color: 0xf84010 });
 	// More materials 3
-	rapierMaterial = new THREE.MeshToonMaterial({color: 0xd0d8e0});
-	machinegunMaterial = new THREE.MeshToonMaterial({color: 0xe0d8c0});
+	rapierMaterial = new THREE.MeshToonMaterial({ color: 0xd0d8e0 });
+	machinegunMaterial = new THREE.MeshToonMaterial({ color: 0xe0d8c0 });
 
 	// Single use meshes
 	floorMesh = new THREE.Mesh(planeGeometry, floorMaterial);
@@ -1243,7 +1492,7 @@ let init = () => {
 	scene.add(sceneLight2);
 	scene.add(sceneLight2.target);
 	// Hemisphere light
-	sceneLight3 = new THREE.HemisphereLight(0xAABBFF, 0xFFBB90, 0.3);
+	sceneLight3 = new THREE.HemisphereLight(0xaabbff, 0xffbb90, 0.3);
 	scene.add(sceneLight3);
 
 	animMesh = new THREE.Mesh(cubeGeometry, fireBombMaterial);
@@ -1260,8 +1509,8 @@ let init = () => {
 	addEventListener("gamepadconnected", gamepadconnectedFunction);
 	addEventListener("gamepaddisconnected", gamepaddisconnectedFunction);
 	gamepads = navigator.getGamepads();
-}
-window.addEventListener('load', init);
+};
+window.addEventListener("load", init);
 
 let tryAnim = () => {
 	window["cubeAnimGltf"] = cubeAnimGltf;
@@ -1270,7 +1519,7 @@ let tryAnim = () => {
 	animMixer = new THREE.AnimationMixer(cubeAnimGltf.scene);
 	let animAction = animMixer.clipAction(cubeAnimGltf.animations[0]);
 	animAction.play();
-}
+};
 
 window["tryAnim"] = tryAnim;
 
@@ -1298,7 +1547,7 @@ let levelLayout = [
 
 let initializeGameState = (gs) => {
 	// make based on levelLayout
-	let startLocations = {t1x: 0, t1y: 0, t2x: 0, t2y: 0};
+	let startLocations = { t1x: 0, t1y: 0, t2x: 0, t2y: 0 };
 	levelLayout.forEach((line, x) => {
 		let split = line.split("");
 		split.forEach((letter, y) => {
@@ -1306,39 +1555,32 @@ let initializeGameState = (gs) => {
 			let yy = 16 - x;
 			if (letter === ".") {
 				// Nothing
-			}
-			else if (letter === "#") {
+			} else if (letter === "#") {
 				// Wall
 				createAppliance(gs, "wall", xx, yy);
-			}
-			else if (letter === "T") {
+			} else if (letter === "T") {
 				// Table
 				createAppliance(gs, "table", xx, yy);
-			}
-			else if (letter === "R") {
+			} else if (letter === "R") {
 				// supply table with rapier
 				let newSupply = createAppliance(gs, "supply", xx, yy);
 				let newItem = createItem(gs, "rapier");
 				transferItem(gs, undefined, newSupply, newItem);
-			}
-			else if (letter === "M") {
+			} else if (letter === "M") {
 				// supply table with machine gun
 				let newSupply = createAppliance(gs, "supply", xx, yy);
 				let newItem = createItem(gs, "machinegun");
 				transferItem(gs, undefined, newSupply, newItem);
-			}
-			else if (letter === "G") {
+			} else if (letter === "G") {
 				// supply table with gun
 				let newSupply = createAppliance(gs, "supply", xx, yy);
 				let newItem = createItem(gs, "gun");
 				transferItem(gs, undefined, newSupply, newItem);
-			}
-			else if (letter === "1") {
+			} else if (letter === "1") {
 				// Team 1 start location
 				startLocations.t1x = xx;
 				startLocations.t1y = yy;
-			}
-			else if (letter === "2") {
+			} else if (letter === "2") {
 				// Team 1 start location
 				startLocations.t2x = xx;
 				startLocations.t2y = yy;
@@ -1346,25 +1588,27 @@ let initializeGameState = (gs) => {
 		});
 	});
 	return startLocations;
-}
+};
 
 let currentView = "entry";
 let goToView = (view) => {
 	let prevViewElement = document.getElementsByClassName("active_view").item(0);
-	let nextViewElement = document.querySelector(`[view="${view}"]`)
+	let nextViewElement = document.querySelector(`[view="${view}"]`);
 	prevViewElement.classList.remove("active_view");
 	nextViewElement.classList.add("active_view");
 	currentView = view;
-}
+};
 
 let roomJoinButtonFunction = (e) => {
 	let roomID = e.target.getAttribute("roomID");
 	goToView("waiting");
-	sendData("joinRoom", {roomID: roomID, playerName: nickname});
-}
+	sendData("joinRoom", { roomID: roomID, playerName: nickname });
+};
 
 let makeRoomOption = (roomName, roomID, gameStarted) => {
-	let existingOption = document.querySelector(`button.room_option_button[roomid="${roomID}"]`);
+	let existingOption = document.querySelector(
+		`button.room_option_button[roomid="${roomID}"]`,
+	);
 	// Replace existing button if one already exists
 	if (existingOption) {
 		if (gameStarted) {
@@ -1383,16 +1627,18 @@ let makeRoomOption = (roomName, roomID, gameStarted) => {
 		newOption.disabled = true;
 	}
 	roomListElement.append(newOption);
-}
+};
 
 let removeRoomOption = (roomID) => {
-	let roomToRemove = document.querySelector(`.room_option_button[roomID="${roomID}"]`);
+	let roomToRemove = document.querySelector(
+		`.room_option_button[roomID="${roomID}"]`,
+	);
 	if (!roomToRemove) {
 		console.log("no room option to remove with that id");
 		return;
 	}
 	roomToRemove.remove();
-}
+};
 
 let makePlayerEntry = (playerName, playerID, playerTeam) => {
 	let newEntry = document.createElement("div");
@@ -1404,21 +1650,25 @@ let makePlayerEntry = (playerName, playerID, playerTeam) => {
 		teamBox = teamBox2;
 	}
 	teamBox.append(newEntry);
-}
+};
 
 let removePlayerEntry = (playerID) => {
-	let playerEntry = document.querySelector(`.player_entry[playerID="${playerID}"]`);
+	let playerEntry = document.querySelector(
+		`.player_entry[playerID="${playerID}"]`,
+	);
 	if (!playerEntry) {
 		return;
 	}
 	playerEntry.remove();
-}
+};
 
 let switchPlayerTeam = (playerID, team) => {
-	let playerEntry = document.querySelector(`.player_entry[playerID="${playerID}"]`);
-	let newTeamBox = (team === 1 ? teamBox1 : teamBox2);
+	let playerEntry = document.querySelector(
+		`.player_entry[playerID="${playerID}"]`,
+	);
+	let newTeamBox = team === 1 ? teamBox1 : teamBox2;
 	newTeamBox.append(playerEntry);
-}
+};
 
 let createOverlayObject = (overlayType, gameObject) => {
 	let newOverlayObject = {
@@ -1435,35 +1685,28 @@ let createOverlayObject = (overlayType, gameObject) => {
 	if (overlayType === "player_name") {
 		ovEl.textContent = gameObject.name;
 		ovEl.classList.add("team" + gameObject.team);
-	}
-	else if (overlayType === "player_health_bar") {
+	} else if (overlayType === "player_health_bar") {
 		let healthBarInner = document.createElement("div");
 		healthBarInner.classList.add("health_bar_inner");
 		ovEl.classList.add("team" + gameObject.team);
 		ovEl.append(healthBarInner);
-	}
-	else if (overlayType === "enemy_name") {
+	} else if (overlayType === "enemy_name") {
 		ovEl.textContent = gameObject.subType;
-	}
-	else if (overlayType === "enemy_health_bar") {
+	} else if (overlayType === "enemy_health_bar") {
 		let healthBarInner = document.createElement("div");
 		healthBarInner.classList.add("health_bar_inner");
 		ovEl.append(healthBarInner);
-	}
-	else if (overlayType === "enemy_stagger_bar") {
+	} else if (overlayType === "enemy_stagger_bar") {
 		let staggerBarInner = document.createElement("div");
 		staggerBarInner.classList.add("stagger_bar_inner");
 		ovEl.append(staggerBarInner);
-	}
-	else if (overlayType === "plant_name") {
+	} else if (overlayType === "plant_name") {
 		ovEl.textContent = gameObject.subType;
-	}
-	else if (overlayType === "plant_growth_bar") {
+	} else if (overlayType === "plant_growth_bar") {
 		let growthBarInner = document.createElement("div");
 		growthBarInner.classList.add("growth_bar_inner");
 		ovEl.append(growthBarInner);
-	}
-	else if (overlayType === "plant_power_bar") {
+	} else if (overlayType === "plant_power_bar") {
 		let powerBarInner = document.createElement("div");
 		powerBarInner.classList.add("power_bar_inner");
 		ovEl.append(powerBarInner);
@@ -1472,11 +1715,11 @@ let createOverlayObject = (overlayType, gameObject) => {
 	overlayList.push(newOverlayObject);
 	gameOverlay.append(ovEl);
 	return newOverlayObject;
-}
+};
 
 let compareInputFrameCount = (a, b) => {
 	return a.frameCount - b.frameCount;
-}
+};
 
 // Apply input to a player object, and return true if there were any changes (and false if not)
 let applyInputToPlayer = (playerObject, playerInput) => {
@@ -1510,15 +1753,19 @@ let applyInputToPlayer = (playerObject, playerInput) => {
 		return true;
 	}
 	*/
-	let anyAxesDifferent = !playerObject.gamepadAxes.every((axis, index) => axis === playerInput.gamepadAxes[index]);
-	let anyButtonDifferent = !playerObject.gamepadButtons.every((button, index) => button === playerInput.gamepadButtons[index]);
+	let anyAxesDifferent = !playerObject.gamepadAxes.every(
+		(axis, index) => axis === playerInput.gamepadAxes[index],
+	);
+	let anyButtonDifferent = !playerObject.gamepadButtons.every(
+		(button, index) => button === playerInput.gamepadButtons[index],
+	);
 	if (anyAxesDifferent || anyButtonDifferent) {
 		playerObject.gamepadAxes = playerInput.gamepadAxes;
 		playerObject.gamepadButtons = playerInput.gamepadButtons;
 		return true;
 	}
 	return false;
-}
+};
 
 // Stats for debug info
 let numRollbacks = 0;
@@ -1529,11 +1776,15 @@ let numLargestRemoteLag = 0;
 let resimulateGame = () => {
 	let currentResimulatedState = gameStateHistory[latestFullInputFrame];
 	// Only keep inputs as long as they will be needed
-	let recentPlayerInputLog = playerInputLog.filter(input => input.frameCount >= latestFullInputFrame);
+	let recentPlayerInputLog = playerInputLog.filter(
+		(input) => input.frameCount >= latestFullInputFrame,
+	);
 	// Sort inputs by frame number
 	recentPlayerInputLog.sort(compareInputFrameCount);
 	// Keep track of latest input from each player
-	let latestPlayerInputs = currentResimulatedState.playerList.map(player => {return {id: player.id, frameCount: latestFullInputFrame};});
+	let latestPlayerInputs = currentResimulatedState.playerList.map((player) => {
+		return { id: player.id, frameCount: latestFullInputFrame };
+	});
 	// Run the game back up to the current frame but with inputs from the input log
 	let tempFrameCount = latestFullInputFrame;
 	let inputLogIterator = 0;
@@ -1541,13 +1792,20 @@ let resimulateGame = () => {
 	let anyChangedInputs = false;
 	while (tempFrameCount < currentFrameCount) {
 		// Apply all (known) player inputs for this frame
-		while (nextPlayerInput !== undefined && nextPlayerInput?.frameCount === tempFrameCount) {
-			let matchingPlayer = currentResimulatedState.playerList.find(player => player.id === nextPlayerInput.id);
+		while (
+			nextPlayerInput !== undefined &&
+			nextPlayerInput?.frameCount === tempFrameCount
+		) {
+			let matchingPlayer = currentResimulatedState.playerList.find(
+				(player) => player.id === nextPlayerInput.id,
+			);
 			if (matchingPlayer !== undefined) {
 				// Check if any inputs are different than expected
-				let applyResult = applyInputToPlayer(matchingPlayer, nextPlayerInput)
+				let applyResult = applyInputToPlayer(matchingPlayer, nextPlayerInput);
 				anyChangedInputs = anyChangedInputs || applyResult;
-				latestPlayerInputs.find(playerInput => playerInput.id === matchingPlayer.id).frameCount = tempFrameCount;
+				latestPlayerInputs.find(
+					(playerInput) => playerInput.id === matchingPlayer.id,
+				).frameCount = tempFrameCount;
 			}
 			// Get next player input in the log
 			inputLogIterator += 1;
@@ -1562,8 +1820,7 @@ let resimulateGame = () => {
 			numResimulatedFrames += 1;
 			tempFrameCount += 1;
 			currentResimulatedState.frameCount = tempFrameCount;
-		}
-		else {
+		} else {
 			// Just use existing historical state
 			tempFrameCount += 1;
 			if (gameStateHistory[tempFrameCount] !== undefined) {
@@ -1576,31 +1833,53 @@ let resimulateGame = () => {
 		// Caught up to current frame, replace game state
 		currentGameState = currentResimulatedState;
 		// Reconnect meshes
-		reconnectMeshesInGameState (currentGameState);
-        window["cgsref"] = currentGameState;
+		reconnectMeshesInGameState(currentGameState);
+		window["cgsref"] = currentGameState;
 		// Update latest full input frame
 		latestPlayerInputs.sort(compareInputFrameCount);
-		latestFullInputFrame = latestPlayerInputs[0]?.frameCount || latestFullInputFrame;
+		latestFullInputFrame =
+			latestPlayerInputs[0]?.frameCount || latestFullInputFrame;
 		numRollbacks += 1;
 	}
-}
+};
 
 let lastGamepadAxes = [0, 0, 0, 0];
-let lastGamepadButtons = [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false];
+let lastGamepadButtons = [
+	false,
+	false,
+	false,
+	false,
+	false,
+	false,
+	false,
+	false,
+	false,
+	false,
+	false,
+	false,
+	false,
+	false,
+	false,
+	false,
+	false,
+];
 let newGamepadInput = false;
 
 let lastTime;
 let timeAccumulator = 0;
-let frameTime = 1000/60;
+let frameTime = 1000 / 60;
 //let shouldResetToInitialState = false;
 let gameLoop = () => {
 	if (gameStarted && currentGameState !== undefined && !gamePaused) {
-
 		if (gamepads.length > 0) {
 			let gamepadAxes = gamepads[0].axes;
-			let gamepadButtons = gamepads[0].buttons.map(btn => btn.pressed);
-			let anyAxesDifferent = !gamepadAxes.every((axis, index) => axis === lastGamepadAxes[index]);
-			let anyButtonDifferent = !gamepadButtons.every((button, index) => button === lastGamepadButtons[index]);
+			let gamepadButtons = gamepads[0].buttons.map((btn) => btn.pressed);
+			let anyAxesDifferent = !gamepadAxes.every(
+				(axis, index) => axis === lastGamepadAxes[index],
+			);
+			let anyButtonDifferent = !gamepadButtons.every(
+				(button, index) => button === lastGamepadButtons[index],
+			);
 			if (anyAxesDifferent || anyButtonDifferent) {
 				//console.log("Controller changed");
 				lastGamepadAxes = gamepadAxes;
@@ -1617,7 +1896,9 @@ let gameLoop = () => {
 
 		let frameTimeAdjust = 0;
 		// Determine if a slight delay or skip forward is needed
-		numLargestRemoteLag = Math.min(...playerFrameAdvantages.map(entry => entry.frameAdvantage));
+		numLargestRemoteLag = Math.min(
+			...playerFrameAdvantages.map((entry) => entry.frameAdvantage),
+		);
 		frameTimeAdjust = -0.1 * numLargestRemoteLag;
 		frameTimeAdjust = Math.max(Math.min(frameTimeAdjust, 10), -10);
 		if (numLargestRemoteLag === Infinity) {
@@ -1628,16 +1909,20 @@ let gameLoop = () => {
 		let deltaTime = newTime - lastTime;
 		lastTime = newTime;
 		timeAccumulator += deltaTime;
-		if (timeAccumulator > (frameTime + frameTimeAdjust)) {
+		if (timeAccumulator > frameTime + frameTimeAdjust) {
 			// Run logic to simulate frames of the game
 			let limit = 10;
-			while (timeAccumulator > (frameTime + frameTimeAdjust) && limit > 0) {
-				timeAccumulator -= (frameTime + frameTimeAdjust);
+			while (timeAccumulator > frameTime + frameTimeAdjust && limit > 0) {
+				timeAccumulator -= frameTime + frameTimeAdjust;
 				limit -= 1;
 				// Apply any playerinputs for this frame
-				let playerInputsToApply = playerInputLog.filter(playerInput => playerInput.frameCount === currentFrameCount);
-				playerInputsToApply.forEach(playerInput => {
-					let matchingPlayer = currentGameState.playerList.find(player => player.id === playerInput.id);
+				let playerInputsToApply = playerInputLog.filter(
+					(playerInput) => playerInput.frameCount === currentFrameCount,
+				);
+				playerInputsToApply.forEach((playerInput) => {
+					let matchingPlayer = currentGameState.playerList.find(
+						(player) => player.id === playerInput.id,
+					);
 					applyInputToPlayer(matchingPlayer, playerInput);
 				});
 				gameStateHistory.push(copyGameState(currentGameState));
@@ -1660,10 +1945,13 @@ let gameLoop = () => {
 			// Case 1: input has changed
 			// Case 2: too long since last time input was sent to server (like a "heartbeat")
 			//if (currentView === "game" && (inputChanged || (lastInputSentFrame + 120 < currentFrameCount))) {
-			if (currentView === "game" && (newGamepadInput || (lastInputSentFrame + 120 < currentFrameCount))) {
+			if (
+				currentView === "game" &&
+				(newGamepadInput || lastInputSentFrame + 120 < currentFrameCount)
+			) {
 				newGamepadInput = false;
 				// inputDelay is normally 3
-				// use -10 when testing rollback 
+				// use -10 when testing rollback
 				let inputDelayToUse = inputDelay;
 				if (testingRollback) {
 					inputDelayToUse = -10;
@@ -1705,13 +1993,12 @@ let gameLoop = () => {
 			inputChanged = false;
 		}
 		renderFrame(currentGameState);
-	}
-	else if (gamePaused) {
+	} else if (gamePaused) {
 		// Don't build up a large chunk of time while paused
 		lastTime = Date.now();
 	}
 	requestAnimationFrame(gameLoop);
-}
+};
 
 let reconnectMeshesInGameState = (gameState) => {
 	reconnectMeshesInObjectList(gameState.playerList);
@@ -1721,20 +2008,20 @@ let reconnectMeshesInGameState = (gameState) => {
 	reconnectMeshesInObjectList(gameState.effectList);
 	reconnectMeshesInObjectList(gameState.enemyList);
 	reconnectMeshesInObjectList(gameState.plantList);
-}
+};
 
 let reconnectMeshesInObjectList = (gameObjectList) => {
-	gameObjectList.forEach(gameObject => {
+	gameObjectList.forEach((gameObject) => {
 		if (gameObject.connectedMesh !== undefined) {
 			gameObject.connectedMesh.connectedObject = gameObject;
 		}
 	});
-}
+};
 
 let missingMeshCreatedCount = 0;
 
 let createMissingMeshes = (gameObjectList, createMeshFunc) => {
-	gameObjectList.forEach(gameObject => {
+	gameObjectList.forEach((gameObject) => {
 		if (gameObject.connectedMesh === undefined) {
 			missingMeshCreatedCount += 1;
 			gameObject.connectedMesh = createMeshFunc(gameObject);
@@ -1746,19 +2033,22 @@ let createMissingMeshes = (gameObjectList, createMeshFunc) => {
 let unneededMeshRemovedCount = 0;
 
 let removeUnneededMeshes = (meshList, gameObjectList) => {
-	meshList.forEach(mesh => {
+	meshList.forEach((mesh) => {
 		// gameObject isn't in the game anymore (destroyed, or rollbacked to never exist)
 		// OR, gameObject has a different mesh attached (rollback shenanigans)
-		if (!gameObjectList.includes(mesh.connectedObject) || mesh.connectedObject.connectedMesh !== mesh) {
+		if (
+			!gameObjectList.includes(mesh.connectedObject) ||
+			mesh.connectedObject.connectedMesh !== mesh
+		) {
 			unneededMeshRemovedCount += 1;
 			scene.remove(mesh);
 			meshList.splice(meshList.indexOf(mesh), 1);
 		}
 	});
-}
+};
 
 let createMissingOverlays = (overlayType, gameObjectList) => {
-	gameObjectList.forEach(gameObject => {
+	gameObjectList.forEach((gameObject) => {
 		if (gameObject.connectedOverlayObjects[overlayType] === undefined) {
 			createOverlayObject(overlayType, gameObject);
 		}
@@ -1767,14 +2057,13 @@ let createMissingOverlays = (overlayType, gameObjectList) => {
 
 let removeUnneededOverlays = (gs) => {
 	let anyRemovals = false;
-	overlayList.forEach(overlayItem => {
+	overlayList.forEach((overlayItem) => {
 		let connectedObject = overlayItem.connectedObject;
 		let connectedObjectType = connectedObject.type;
 		let gameObjectList;
 		if (connectedObjectType === "player") {
 			gameObjectList = gs.playerList;
-		}
-		else if (connectedObjectType === "enemy") {
+		} else if (connectedObjectType === "enemy") {
 			gameObjectList = gs.enemyList;
 		}
 		// Put the other object list conditionals here...
@@ -1783,7 +2072,10 @@ let removeUnneededOverlays = (gs) => {
 			return;
 		}
 		// gameObject has a different overlay attached for this type (rollback shenanigans?)
-		if (connectedObject.connectedOverlayObjects[overlayItem.overlayType] !== overlayItem) {
+		if (
+			connectedObject.connectedOverlayObjects[overlayItem.overlayType] !==
+			overlayItem
+		) {
 			overlayItem.overlayElement.remove();
 			overlayItem.toBeRemoved = true;
 		}
@@ -1791,17 +2083,18 @@ let removeUnneededOverlays = (gs) => {
 		else if (!gameObjectList.includes(connectedObject)) {
 			overlayItem.overlayElement.remove();
 			overlayItem.toBeRemoved = true;
-			connectedObject.connectedOverlayObjects[overlayItem.overlayType] = undefined;
+			connectedObject.connectedOverlayObjects[overlayItem.overlayType] =
+				undefined;
 		}
 	});
 	if (anyRemovals) {
-		overlayList = overlayList.filter(overlayItem => !overlayItem.toBeRemoved);
+		overlayList = overlayList.filter((overlayItem) => !overlayItem.toBeRemoved);
 	}
-}
+};
 
 let renderFrame = (gs) => {
 	if (animMixer !== undefined) {
-		animMixer.update(1/60/3);
+		animMixer.update(1 / 60 / 3);
 	}
 	// Create meshes for all objects if they haven't been made yet
 	// (Done here to better support rollback)
@@ -1822,7 +2115,7 @@ let renderFrame = (gs) => {
 	removeUnneededMeshes(enemyMeshList, gs.enemyList);
 	removeUnneededMeshes(plantMeshList, gs.plantList);
 	// Update rendering position, rotation, material, etc for all objects
-	gs.applianceList.forEach(applianceObject => {
+	gs.applianceList.forEach((applianceObject) => {
 		let applianceMesh = applianceObject.connectedMesh;
 		applianceMesh.position.x = applianceObject.xPosition;
 		applianceMesh.position.y = applianceObject.yPosition;
@@ -1830,9 +2123,17 @@ let renderFrame = (gs) => {
 	});
 	let localPlayer = getLocalPlayer(gs);
 	let localPlayerMesh = localPlayer.connectedMesh;
-	sceneLight2.position.set(localPlayerMesh.position.x, localPlayerMesh.position.y, localPlayerMesh.position.z + 10);
-	sceneLight2.target.position.set(localPlayerMesh.position.x, localPlayerMesh.position.y, localPlayerMesh.position.z - 5);
-	gs.playerList.forEach(playerObject => {
+	sceneLight2.position.set(
+		localPlayerMesh.position.x,
+		localPlayerMesh.position.y,
+		localPlayerMesh.position.z + 10,
+	);
+	sceneLight2.target.position.set(
+		localPlayerMesh.position.x,
+		localPlayerMesh.position.y,
+		localPlayerMesh.position.z - 5,
+	);
+	gs.playerList.forEach((playerObject) => {
 		let playerMesh = playerObject.connectedMesh;
 		playerMesh.position.x = playerObject.xPosition;
 		playerMesh.position.y = playerObject.yPosition;
@@ -1843,42 +2144,40 @@ let renderFrame = (gs) => {
 		playerMesh.rotation.y = 0;
 		playerMesh.rotation.z = playerObject.rotation;
 		if (playerObject.rolling) {
-			playerMesh.rotateY(-2 * Math.PI * playerObject.rollStun / 15);
+			playerMesh.rotateY((-2 * Math.PI * playerObject.rollStun) / 15);
 		}
-		
-        if (playerObject.defeated) {
+
+		if (playerObject.defeated) {
 			if (playerObject.team === 1) {
 				playerMesh.material = playerTeam1DefeatedMaterial;
-			}
-			else if (playerObject.team === 2) {
+			} else if (playerObject.team === 2) {
 				playerMesh.material = playerTeam2DefeatedMaterial;
 			}
-            playerMesh.castShadow = false;
-            playerMesh.receiveShadow = false;
-        }
-        else {
+			playerMesh.castShadow = false;
+			playerMesh.receiveShadow = false;
+		} else {
 			if (playerObject.team === 1) {
 				playerMesh.material = playerTeam1Material;
-			}
-			else if (playerObject.team === 2) {
+			} else if (playerObject.team === 2) {
 				playerMesh.material = playerTeam2Material;
 			}
-            playerMesh.castShadow = true;
-            playerMesh.receiveShadow = true;
-        }
-        if (playerObject === localPlayer) {
-            gs.applianceList.forEach(applianceObject => {
-                if (playerObject.xTarget === applianceObject.xPosition &&
-                    playerObject.yTarget === applianceObject.yPosition) {
-                    applianceObject.connectedMesh.material = applianceObject.highlightMat;
-                }
-                else {
-                    applianceObject.connectedMesh.material = applianceObject.regularMat;
-                }
-            });
-        }
+			playerMesh.castShadow = true;
+			playerMesh.receiveShadow = true;
+		}
+		if (playerObject === localPlayer) {
+			gs.applianceList.forEach((applianceObject) => {
+				if (
+					playerObject.xTarget === applianceObject.xPosition &&
+					playerObject.yTarget === applianceObject.yPosition
+				) {
+					applianceObject.connectedMesh.material = applianceObject.highlightMat;
+				} else {
+					applianceObject.connectedMesh.material = applianceObject.regularMat;
+				}
+			});
+		}
 	});
-	gs.itemList.forEach(itemObject => {
+	gs.itemList.forEach((itemObject) => {
 		let itemMesh = itemObject.connectedMesh;
 		if (itemObject.holder !== undefined) {
 			itemMesh.parent = itemObject.holder.connectedMesh;
@@ -1888,20 +2187,17 @@ let renderFrame = (gs) => {
 			itemMesh.position.set(1, 0, 0.5);
 			if (itemObject.fixedRotation) {
 				itemMesh.rotation.z = itemObject.holder.rotation * -1;
-			}
-			else {
+			} else {
 				let rotationModify = 0;
 				if (itemObject.subType === "rapier") {
-					rotationModify = -Math.PI * 2 / 3;
+					rotationModify = (-Math.PI * 2) / 3;
 				}
 				itemMesh.rotation.z = itemObject.initialRotation + rotationModify;
 			}
-		}
-		else if (itemObject.heldByAppliance) {
+		} else if (itemObject.heldByAppliance) {
 			itemMesh.position.set(0, 0, 1);
 			itemMesh.rotation.z = itemObject.initialRotation;
-		}
-		else if (itemObject.heldByPlant) {
+		} else if (itemObject.heldByPlant) {
 			itemMesh.position.set(0, 0, 1);
 			itemMesh.rotation.z = itemObject.initialRotation;
 		}
@@ -1910,57 +2206,59 @@ let renderFrame = (gs) => {
 			itemMesh.material = itemMaterial2;
 		}
 	});
-	gs.projectileList.forEach(projectileObject => {
+	gs.projectileList.forEach((projectileObject) => {
 		let projectileMesh = projectileObject.connectedMesh;
 		projectileMesh.position.x = projectileObject.xPosition;
 		projectileMesh.position.y = projectileObject.yPosition;
 		projectileMesh.rotation.z = projectileObject.rotation;
 	});
-	gs.effectList.forEach(effectObject => {
+	gs.effectList.forEach((effectObject) => {
 		let effectMesh = effectObject.connectedMesh;
 		effectMesh.scale.x = (40 - effectObject.lifespan) / 40;
 		effectMesh.scale.y = (40 - effectObject.lifespan) / 40;
 		effectMesh.position.x = effectObject.xPosition;
 		effectMesh.position.y = effectObject.yPosition;
 	});
-	gs.enemyList.forEach(enemyObject => {
+	gs.enemyList.forEach((enemyObject) => {
 		let enemyMesh = enemyObject.connectedMesh;
 		enemyMesh.position.x = enemyObject.xPosition;
 		enemyMesh.position.y = enemyObject.yPosition;
 		enemyMesh.rotation.z = enemyObject.rotation;
 		if (enemyObject.state === "defeat") {
-			enemyMesh.scale.x = ((61 - enemyObject.stateTimer) / 60);
-			enemyMesh.scale.y = ((61 - enemyObject.stateTimer) / 60);
-			enemyMesh.scale.z = ((61 - enemyObject.stateTimer) / 60);
-		}
-		else {
+			enemyMesh.scale.x = (61 - enemyObject.stateTimer) / 60;
+			enemyMesh.scale.y = (61 - enemyObject.stateTimer) / 60;
+			enemyMesh.scale.z = (61 - enemyObject.stateTimer) / 60;
+		} else {
 			enemyMesh.scale.x = 1;
 			enemyMesh.scale.y = 1;
 			enemyMesh.scale.z = 1;
 		}
 		if (enemyObject.state === "attack") {
 			enemyMesh.material = enemy1AttackMaterial;
-		}
-		else if (enemyObject.state === "stunned") {
+		} else if (enemyObject.state === "stunned") {
 			enemyMesh.material = enemy1StunnedMaterial;
-		}
-		else if (enemyObject.state === "angry") {
+		} else if (enemyObject.state === "angry") {
 			enemyMesh.material = enemy1AngryMaterial;
-		}
-		else {
+		} else {
 			enemyMesh.material = enemy1Material;
 		}
 	});
-	gs.plantList.forEach(plantObject => {
+	gs.plantList.forEach((plantObject) => {
 		let plantMesh = plantObject.connectedMesh;
 		plantMesh.position.x = plantObject.xPosition;
 		plantMesh.position.y = plantObject.yPosition;
 	});
 	// Third person camera
 	camera.position.set(
-		localPlayerMesh.position.x + 20 * Math.sin(localPlayer.cameraRotation) * Math.sin(localPlayer.cameraTilt),
-		localPlayerMesh.position.y - 20 * Math.cos(localPlayer.cameraRotation) * Math.sin(localPlayer.cameraTilt),
-		localPlayerMesh.position.z + 20 * Math.cos(localPlayer.cameraTilt)
+		localPlayerMesh.position.x +
+			20 *
+				Math.sin(localPlayer.cameraRotation) *
+				Math.sin(localPlayer.cameraTilt),
+		localPlayerMesh.position.y -
+			20 *
+				Math.cos(localPlayer.cameraRotation) *
+				Math.sin(localPlayer.cameraTilt),
+		localPlayerMesh.position.z + 20 * Math.cos(localPlayer.cameraTilt),
 	);
 	camera.lookAt(localPlayerMesh.position);
 
@@ -1982,7 +2280,7 @@ let renderFrame = (gs) => {
 	// Remove unneeded overlays
 	removeUnneededOverlays(gs);
 	// Update overlays
-	overlayList.forEach(overlayItem => {
+	overlayList.forEach((overlayItem) => {
 		let overlayElement = overlayItem.overlayElement;
 		let trackTarget = overlayItem.connectedObject.connectedMesh;
 		let coords = meshToScreenCoordinates(trackTarget);
@@ -1992,40 +2290,95 @@ let renderFrame = (gs) => {
 			overlayItem.xLast = coords.x;
 			overlayItem.yLast = coords.y;
 		}
-		if (overlayItem.overlayType === "player_health_bar" || overlayItem.overlayType === "enemy_health_bar") {
+		if (
+			overlayItem.overlayType === "player_health_bar" ||
+			overlayItem.overlayType === "enemy_health_bar"
+		) {
 			let displayedHealth = overlayElement.style.getPropertyValue("--health");
-			let displayedMaxHealth = overlayElement.style.getPropertyValue("--max-health");
+			let displayedMaxHealth =
+				overlayElement.style.getPropertyValue("--max-health");
 			// Using != because the dom saves these as strings instead of numbers
-			if (overlayItem.connectedObject.health != displayedHealth || overlayItem.connectedObject.maxHealth != displayedMaxHealth) {
-				overlayElement.style.setProperty("--health", Math.min(Math.max(0, overlayItem.connectedObject.health), overlayItem.connectedObject.maxHealth));
-				overlayElement.style.setProperty("--max-health", overlayItem.connectedObject.maxHealth);
+			if (
+				overlayItem.connectedObject.health != displayedHealth ||
+				overlayItem.connectedObject.maxHealth != displayedMaxHealth
+			) {
+				overlayElement.style.setProperty(
+					"--health",
+					Math.min(
+						Math.max(0, overlayItem.connectedObject.health),
+						overlayItem.connectedObject.maxHealth,
+					),
+				);
+				overlayElement.style.setProperty(
+					"--max-health",
+					overlayItem.connectedObject.maxHealth,
+				);
 			}
 		}
 		if (overlayItem.overlayType === "enemy_stagger_bar") {
 			let displayedStagger = overlayElement.style.getPropertyValue("--stagger");
-			let displayedMaxStagger = overlayElement.style.getPropertyValue("--max-stagger");
+			let displayedMaxStagger =
+				overlayElement.style.getPropertyValue("--max-stagger");
 			// Using != because the dom saves these as strings instead of numbers
-			if (overlayItem.connectedObject.stagger != displayedStagger || overlayItem.connectedObject.maxStagger != displayedMaxStagger) {
-				overlayElement.style.setProperty("--stagger", Math.min(Math.max(0, overlayItem.connectedObject.stagger), overlayItem.connectedObject.maxStagger));
-				overlayElement.style.setProperty("--max-stagger", overlayItem.connectedObject.maxStagger);
+			if (
+				overlayItem.connectedObject.stagger != displayedStagger ||
+				overlayItem.connectedObject.maxStagger != displayedMaxStagger
+			) {
+				overlayElement.style.setProperty(
+					"--stagger",
+					Math.min(
+						Math.max(0, overlayItem.connectedObject.stagger),
+						overlayItem.connectedObject.maxStagger,
+					),
+				);
+				overlayElement.style.setProperty(
+					"--max-stagger",
+					overlayItem.connectedObject.maxStagger,
+				);
 			}
 		}
 		if (overlayItem.overlayType === "plant_growth_bar") {
 			let displayedGrowth = overlayElement.style.getPropertyValue("--growth");
-			let displayedMaxGrowth = overlayElement.style.getPropertyValue("--max-growth");
+			let displayedMaxGrowth =
+				overlayElement.style.getPropertyValue("--max-growth");
 			// Using != because the dom saves these as strings instead of numbers
-			if (overlayItem.connectedObject.growth != displayedGrowth || overlayItem.connectedObject.maxGrowth != displayedMaxGrowth) {
-				overlayElement.style.setProperty("--growth", Math.min(Math.max(0, overlayItem.connectedObject.growth), overlayItem.connectedObject.maxGrowth));
-				overlayElement.style.setProperty("--max-growth", overlayItem.connectedObject.maxGrowth);
+			if (
+				overlayItem.connectedObject.growth != displayedGrowth ||
+				overlayItem.connectedObject.maxGrowth != displayedMaxGrowth
+			) {
+				overlayElement.style.setProperty(
+					"--growth",
+					Math.min(
+						Math.max(0, overlayItem.connectedObject.growth),
+						overlayItem.connectedObject.maxGrowth,
+					),
+				);
+				overlayElement.style.setProperty(
+					"--max-growth",
+					overlayItem.connectedObject.maxGrowth,
+				);
 			}
 		}
 		if (overlayItem.overlayType === "plant_power_bar") {
 			let displayedPower = overlayElement.style.getPropertyValue("--power");
-			let displayedMaxPower = overlayElement.style.getPropertyValue("--max-power");
+			let displayedMaxPower =
+				overlayElement.style.getPropertyValue("--max-power");
 			// Using != because the dom saves these as strings instead of numbers
-			if (overlayItem.connectedObject.power != displayedPower || overlayItem.connectedObject.maxPower != displayedMaxPower) {
-				overlayElement.style.setProperty("--power", Math.min(Math.max(0, overlayItem.connectedObject.power), overlayItem.connectedObject.maxPower));
-				overlayElement.style.setProperty("--max-power", overlayItem.connectedObject.maxPower);
+			if (
+				overlayItem.connectedObject.power != displayedPower ||
+				overlayItem.connectedObject.maxPower != displayedMaxPower
+			) {
+				overlayElement.style.setProperty(
+					"--power",
+					Math.min(
+						Math.max(0, overlayItem.connectedObject.power),
+						overlayItem.connectedObject.maxPower,
+					),
+				);
+				overlayElement.style.setProperty(
+					"--max-power",
+					overlayItem.connectedObject.maxPower,
+				);
 			}
 		}
 	});
@@ -2037,33 +2390,31 @@ let renderFrame = (gs) => {
 		missingMeshCreatedSpan.textContent = missingMeshCreatedCount;
 		unneededMeshRemovedSpan.textContent = unneededMeshRemovedCount;
 	}
-    if (gs.gameFinished) {
-        gameStatusMessageSpan.textContent = `Game finished, Team ${gs.gameWinner} won!`;
-    }
-    else if (gs.gameActive) {
-        gameStatusMessageSpan.textContent = "Round in progress";
-    }
-    else {
-        gameStatusMessageSpan.textContent = `Round over, Team ${gs.roundWinner} wins. Next round in ${Math.round(gs.roundEndCountdown / 60)}.`;
-    }
-    team1ScoreSpan.textContent = gs.team1Score;
-    team2ScoreSpan.textContent = gs.team2Score;
-}
+	if (gs.gameFinished) {
+		gameStatusMessageSpan.textContent = `Game finished, Team ${gs.gameWinner} won!`;
+	} else if (gs.gameActive) {
+		gameStatusMessageSpan.textContent = "Round in progress";
+	} else {
+		gameStatusMessageSpan.textContent = `Round over, Team ${gs.roundWinner} wins. Next round in ${Math.round(gs.roundEndCountdown / 60)}.`;
+	}
+	team1ScoreSpan.textContent = gs.team1Score;
+	team2ScoreSpan.textContent = gs.team2Score;
+};
 
 let getLocalPlayer = (gs) => {
-	return gs.playerList.filter(player => player.id === localPlayerID)[0];
-}
+	return gs.playerList.filter((player) => player.id === localPlayerID)[0];
+};
 
 let collisionTest = (object1, object2) => {
 	let xDif = Math.abs(object1.xPosition - object2.xPosition);
 	let yDif = Math.abs(object1.yPosition - object2.yPosition);
-	return (xDif < 0.5 && yDif < 0.5);
-}
+	return xDif < 0.5 && yDif < 0.5;
+};
 
 let gameLogic = (gs) => {
 	// Effects can change even while game is otherwise paused for between-round pauses
 	let anyEffectRemovals = false;
-	gs.effectList.forEach(effectObject => {
+	gs.effectList.forEach((effectObject) => {
 		effectObject.lifespan -= 1;
 		if (effectObject.lifespan <= 0) {
 			effectObject.toBeRemoved = true;
@@ -2071,49 +2422,61 @@ let gameLogic = (gs) => {
 		}
 	});
 	if (anyEffectRemovals) {
-		gs.effectList.filter(effectObject => effectObject.toBeRemoved).forEach(effectObject => {removeEffect(gs, effectObject);});
+		gs.effectList
+			.filter((effectObject) => effectObject.toBeRemoved)
+			.forEach((effectObject) => {
+				removeEffect(gs, effectObject);
+			});
 	}
 	// Freeze the game if done or between rounds
-    if (gs.gameFinished) {
-        return;
-    }
-    if (!gs.gameActive) {
-        gs.roundEndCountdown -= 1;
-        if (gs.roundEndCountdown <= 0) {
-            gs.gameActive = true;
+	if (gs.gameFinished) {
+		return;
+	}
+	if (!gs.gameActive) {
+		gs.roundEndCountdown -= 1;
+		if (gs.roundEndCountdown <= 0) {
+			gs.gameActive = true;
 			// Reset game to initial state
 			// Remove all held items from appliances besides supply tables
-			gs.applianceList.forEach(applianceObject => {
-				if (applianceObject.holdingItem && applianceObject.subType !== "supply") {
-					transferItem(gs, applianceObject, undefined, applianceObject.heldItem);
+			gs.applianceList.forEach((applianceObject) => {
+				if (
+					applianceObject.holdingItem &&
+					applianceObject.subType !== "supply"
+				) {
+					transferItem(
+						gs,
+						applianceObject,
+						undefined,
+						applianceObject.heldItem,
+					);
 				}
 			});
 			// Remove all held items from players
 			// Set players locations back to initial starting point
-			// Set players health and other stats back to initial values. 
-			gs.playerList.forEach(playerObject => {
+			// Set players health and other stats back to initial values.
+			gs.playerList.forEach((playerObject) => {
 				if (playerObject.holdingItem) {
 					transferItem(gs, playerObject, undefined, playerObject.heldItem);
 				}
 				resetPlayerObject(playerObject);
 			});
 			// Remove all projectiles, effects
-			gs.projectileList.forEach(projectileObject => {
+			gs.projectileList.forEach((projectileObject) => {
 				projectileObject.toBeRemoved = true;
 			});
-			gs.effectList.forEach(projectileObject => {
+			gs.effectList.forEach((projectileObject) => {
 				projectileObject.toBeRemoved = true;
 			});
-        }
-        return;
-    }
+		}
+		return;
+	}
 	let anyRemovals = false;
-    // Tracking defeated players for their team's victory/defeat
-    let team2AllDefeated = true;
-    let team2AnyPlayers = false;
-    let team1AllDefeated = true;
-    let team1AnyPlayers = false;
-	gs.playerList.forEach(playerObject => {
+	// Tracking defeated players for their team's victory/defeat
+	let team2AllDefeated = true;
+	let team2AnyPlayers = false;
+	let team1AllDefeated = true;
+	let team1AnyPlayers = false;
+	gs.playerList.forEach((playerObject) => {
 		// Buttons
 		let buttonA = playerObject.gamepadButtons[0];
 		let buttonB = playerObject.gamepadButtons[1];
@@ -2170,10 +2533,16 @@ let gameLogic = (gs) => {
 		}
 		// Rotate axes for left stick based on camera rotation
 		let origLeftX = leftStickX;
-		leftStickX = leftStickX * Math.cos(playerObject.cameraRotation) + leftStickY * Math.sin(playerObject.cameraRotation);
-		leftStickY = leftStickY * Math.cos(playerObject.cameraRotation) - origLeftX * Math.sin(playerObject.cameraRotation);
+		leftStickX =
+			leftStickX * Math.cos(playerObject.cameraRotation) +
+			leftStickY * Math.sin(playerObject.cameraRotation);
+		leftStickY =
+			leftStickY * Math.cos(playerObject.cameraRotation) -
+			origLeftX * Math.sin(playerObject.cameraRotation);
 		// Cap at 1 magnitude (Normalize the movement vector)
-		let leftStickMagnitude = Math.sqrt(leftStickX * leftStickX + leftStickY * leftStickY);
+		let leftStickMagnitude = Math.sqrt(
+			leftStickX * leftStickX + leftStickY * leftStickY,
+		);
 		if (leftStickMagnitude > 1) {
 			leftStickX = leftStickX / leftStickMagnitude;
 			leftStickY = leftStickY / leftStickMagnitude;
@@ -2196,7 +2565,8 @@ let gameLogic = (gs) => {
 			playerObject.cameraTilt = 0.1;
 		}
 		// Determine if stunned in some way
-		let stunned = playerObject.attackStun > 0 ||
+		let stunned =
+			playerObject.attackStun > 0 ||
 			playerObject.blockStun > 0 ||
 			playerObject.hitStun > 0 ||
 			playerObject.staggerStun > 0 ||
@@ -2232,33 +2602,34 @@ let gameLogic = (gs) => {
 				ySpeedChange /= Math.SQRT2;
 			}*/
 		}
-        /*if (playerObject.runPressed && !playerObject.readyPressed) {
+		/*if (playerObject.runPressed && !playerObject.readyPressed) {
             xSpeedChange *= 1.7;
             ySpeedChange *= 1.7;
         }*/
 		// Defeated players are very slow
 		//if (playerObject.defeated) {
-			//xSpeedChange *= 0.1;
-			//ySpeedChange *= 0.1;
+		//xSpeedChange *= 0.1;
+		//ySpeedChange *= 0.1;
 		//}
-		let anyDirectionPressed = (xSpeedChange !== 0 || ySpeedChange !== 0);
+		let anyDirectionPressed = xSpeedChange !== 0 || ySpeedChange !== 0;
 		let rotationChange = 0;
 		let targetRotation = playerObject.rotation;
 		//if (playerObject.readyPressed) {
 		if (false) {
 			// Player is trying to ready a weapon - point toward mouse instead
-			targetRotation = -Math.atan2(playerObject.yMousePosition, playerObject.xMousePosition);
-            playerObject.movedMouseWhileStill = false;
-		}
-		else if (anyDirectionPressed) {
+			targetRotation = -Math.atan2(
+				playerObject.yMousePosition,
+				playerObject.xMousePosition,
+			);
+			playerObject.movedMouseWhileStill = false;
+		} else if (anyDirectionPressed) {
 			// Player is just moving around without trying to ready a weapon
 			targetRotation = Math.atan2(ySpeedChange, xSpeedChange);
-            playerObject.movedMouseWhileStill = false;
-		}
-        else {
-            // Player is not moving or readying a weapon
-            // If mouse moved, point toward mouse. Otherwise keep current rotation
-            /*if (playerObject.xMousePosition !== playerObject.xMousePrevPosition ||
+			playerObject.movedMouseWhileStill = false;
+		} else {
+			// Player is not moving or readying a weapon
+			// If mouse moved, point toward mouse. Otherwise keep current rotation
+			/*if (playerObject.xMousePosition !== playerObject.xMousePrevPosition ||
                 playerObject.yMousePosition !== playerObject.yMousePrevPosition) {
                 playerObject.movedMouseWhileStill = true;
             }
@@ -2269,18 +2640,19 @@ let gameLogic = (gs) => {
                 targetRotation = playerObject.rotation;
             }
 			*/
-        }
+		}
 		let oppositeRotation = false;
 		//if (anyDirectionPressed || playerObject.readyPressed || playerObject.movedMouseWhileStill) {
 		//if (false) {
 		if (anyDirectionPressed) {
 			if (playerObject.rotation !== targetRotation) {
-				let targetRotationDifference = Math.abs(playerObject.rotation - targetRotation);
+				let targetRotationDifference = Math.abs(
+					playerObject.rotation - targetRotation,
+				);
 				// Apply spin to player's rotation toward targetRotation
 				if (playerObject.rotation > targetRotation) {
 					rotationChange -= 0.17;
-				}
-				else {
+				} else {
 					rotationChange += 0.17;
 				}
 				// If the target rotation difference is greater than pi, spin the opposite way
@@ -2300,13 +2672,18 @@ let gameLogic = (gs) => {
 			playerObject.rotation += rotationChange;
 			// Don't overshoot the targetRotation
 			if (oppositeRotation) {
-				if ((rotationChange > 0 && playerObject.rotation < targetRotation) || (rotationChange < 0 && playerObject.rotation > targetRotation)) {
-					playerObject.rotation = targetRotation; 
+				if (
+					(rotationChange > 0 && playerObject.rotation < targetRotation) ||
+					(rotationChange < 0 && playerObject.rotation > targetRotation)
+				) {
+					playerObject.rotation = targetRotation;
 				}
-			}
-			else {
-				if ((rotationChange > 0 && playerObject.rotation > targetRotation) || (rotationChange < 0 && playerObject.rotation < targetRotation)) {
-					playerObject.rotation = targetRotation; 
+			} else {
+				if (
+					(rotationChange > 0 && playerObject.rotation > targetRotation) ||
+					(rotationChange < 0 && playerObject.rotation < targetRotation)
+				) {
+					playerObject.rotation = targetRotation;
 				}
 			}
 			// Loop around the pi to negative pi limit
@@ -2333,8 +2710,8 @@ let gameLogic = (gs) => {
 		}*/
 		// Don't move while holding space
 		//if (!playerObject.anchorPressed) {
-			//playerObject.xSpeed += xSpeedChange;
-			//playerObject.ySpeed += ySpeedChange;
+		//playerObject.xSpeed += xSpeedChange;
+		//playerObject.ySpeed += ySpeedChange;
 		//}
 		// Slow down if trying to ready a weapon
 		/*if (playerObject.readyPressed) {
@@ -2358,10 +2735,12 @@ let gameLogic = (gs) => {
 		//let collisionApplianceList = gs.applianceList.filter(appliance => appliance.subType !== "lamp");
 		let standingOnAppliance = false;
 		let collisionApplianceList = gs.applianceList;
-		collisionApplianceList.forEach(appliance => {
-			if (Math.abs(appliance.xPosition - xPotential) <= playerSize &&
+		collisionApplianceList.forEach((appliance) => {
+			if (
+				Math.abs(appliance.xPosition - xPotential) <= playerSize &&
 				Math.abs(appliance.yPosition - yPotential) <= playerSize &&
-				Math.abs(appliance.zPosition - zPotential) <= playerSize) {
+				Math.abs(appliance.zPosition - zPotential) <= playerSize
+			) {
 				let xAppDif = Math.abs(playerObject.xPosition - appliance.xPosition);
 				let yAppDif = Math.abs(playerObject.yPosition - appliance.yPosition);
 				let zAppDif = Math.abs(playerObject.zPosition - appliance.zPosition);
@@ -2370,88 +2749,130 @@ let gameLogic = (gs) => {
 					if (playerObject.zPosition > appliance.zPosition) {
 						// Vertical top side
 						// Make sure appliance's vertical top side isn't covered by another appliance
-						let topSideCovered = collisionApplianceList.some(otherAppliance => {
-							return otherAppliance.xPosition === appliance.xPosition &&
-								otherAppliance.yPosition === appliance.yPosition &&
-								otherAppliance.zPosition === appliance.zPosition + 1;
-						});
+						let topSideCovered = collisionApplianceList.some(
+							(otherAppliance) => {
+								return (
+									otherAppliance.xPosition === appliance.xPosition &&
+									otherAppliance.yPosition === appliance.yPosition &&
+									otherAppliance.zPosition === appliance.zPosition + 1
+								);
+							},
+						);
 						if (!topSideCovered) {
-							playerObject.zSpeed = Math.max(playerObject.zSpeed, playerSize + appliance.zPosition - playerObject.zPosition);
+							playerObject.zSpeed = Math.max(
+								playerObject.zSpeed,
+								playerSize + appliance.zPosition - playerObject.zPosition,
+							);
 							// Standing on the appliance - should be able to jump as if at z=0
 							standingOnAppliance = true;
 						}
-					}
-					else {
+					} else {
 						// Vertical bottom side
 						// Make sure appliance's bottom side isn't covered by another appliance
-						let bottomSideCovered = collisionApplianceList.some(otherAppliance => {
-							return otherAppliance.xPosition === appliance.xPosition &&
-								otherAppliance.yPosition === appliance.yPosition &&
-								otherAppliance.zPosition === appliance.zPosition - 1;
-						});
+						let bottomSideCovered = collisionApplianceList.some(
+							(otherAppliance) => {
+								return (
+									otherAppliance.xPosition === appliance.xPosition &&
+									otherAppliance.yPosition === appliance.yPosition &&
+									otherAppliance.zPosition === appliance.zPosition - 1
+								);
+							},
+						);
 						if (!bottomSideCovered) {
-							playerObject.zSpeed = Math.min(playerObject.zSpeed, -playerSize + appliance.zPosition - playerObject.zPosition);
+							playerObject.zSpeed = Math.min(
+								playerObject.zSpeed,
+								-playerSize + appliance.zPosition - playerObject.zPosition,
+							);
 						}
 					}
-				}
-				else if (xAppDif > yAppDif) {
+				} else if (xAppDif > yAppDif) {
 					// Left or right side
 					if (playerObject.xPosition > appliance.xPosition) {
 						// Right side
 						// Make sure appliance's right side isn't covered by another appliance
-						let rightSideCovered = collisionApplianceList.some(otherAppliance => {
-							return otherAppliance.xPosition === appliance.xPosition + 1 &&
-								otherAppliance.yPosition === appliance.yPosition && 
-								otherAppliance.zPosition === appliance.zPosition;
-						});
+						let rightSideCovered = collisionApplianceList.some(
+							(otherAppliance) => {
+								return (
+									otherAppliance.xPosition === appliance.xPosition + 1 &&
+									otherAppliance.yPosition === appliance.yPosition &&
+									otherAppliance.zPosition === appliance.zPosition
+								);
+							},
+						);
 						if (!rightSideCovered) {
-							playerObject.xSpeed = Math.max(playerObject.xSpeed, playerSize + appliance.xPosition - playerObject.xPosition);
+							playerObject.xSpeed = Math.max(
+								playerObject.xSpeed,
+								playerSize + appliance.xPosition - playerObject.xPosition,
+							);
 						}
-					}
-					else {
+					} else {
 						// Left side
 						// Make sure appliance's right side isn't covered by another appliance
-						let leftSideCovered = collisionApplianceList.some(otherAppliance => {
-							return otherAppliance.xPosition === appliance.xPosition - 1 &&
-								otherAppliance.yPosition === appliance.yPosition &&
-								otherAppliance.zPosition === appliance.zPosition;
-						});
+						let leftSideCovered = collisionApplianceList.some(
+							(otherAppliance) => {
+								return (
+									otherAppliance.xPosition === appliance.xPosition - 1 &&
+									otherAppliance.yPosition === appliance.yPosition &&
+									otherAppliance.zPosition === appliance.zPosition
+								);
+							},
+						);
 						if (!leftSideCovered) {
-							playerObject.xSpeed = Math.min(playerObject.xSpeed, -playerSize + appliance.xPosition - playerObject.xPosition);
+							playerObject.xSpeed = Math.min(
+								playerObject.xSpeed,
+								-playerSize + appliance.xPosition - playerObject.xPosition,
+							);
 						}
 					}
-				}
-				else {
+				} else {
 					// Top or bottom side
 					if (playerObject.yPosition > appliance.yPosition) {
 						// Bottom side
 						// Make sure appliance's bottom side isn't covered by another appliance
-						let bottomSideCovered = collisionApplianceList.some(otherAppliance => {
-							return otherAppliance.xPosition === appliance.xPosition &&
-								otherAppliance.yPosition === appliance.yPosition + 1 &&
-								otherAppliance.zPosition === appliance.zPosition;
-						});
+						let bottomSideCovered = collisionApplianceList.some(
+							(otherAppliance) => {
+								return (
+									otherAppliance.xPosition === appliance.xPosition &&
+									otherAppliance.yPosition === appliance.yPosition + 1 &&
+									otherAppliance.zPosition === appliance.zPosition
+								);
+							},
+						);
 						if (!bottomSideCovered) {
-							playerObject.ySpeed = Math.max(playerObject.ySpeed, playerSize + appliance.yPosition - playerObject.yPosition);
+							playerObject.ySpeed = Math.max(
+								playerObject.ySpeed,
+								playerSize + appliance.yPosition - playerObject.yPosition,
+							);
 						}
-					}
-					else {
+					} else {
 						// Top side
 						// Make sure appliance's right side isn't covered by another appliance
-						let topSideCovered = collisionApplianceList.some(otherAppliance => {
-							return otherAppliance.xPosition === appliance.xPosition &&
-								otherAppliance.yPosition === appliance.yPosition - 1 &&
-								otherAppliance.zPosition === appliance.zPosition;
-						});
+						let topSideCovered = collisionApplianceList.some(
+							(otherAppliance) => {
+								return (
+									otherAppliance.xPosition === appliance.xPosition &&
+									otherAppliance.yPosition === appliance.yPosition - 1 &&
+									otherAppliance.zPosition === appliance.zPosition
+								);
+							},
+						);
 						if (!topSideCovered) {
-							playerObject.ySpeed = Math.min(playerObject.ySpeed, -playerSize + appliance.yPosition - playerObject.yPosition);
+							playerObject.ySpeed = Math.min(
+								playerObject.ySpeed,
+								-playerSize + appliance.yPosition - playerObject.yPosition,
+							);
 						}
 					}
 				}
 			}
 		});
 		// Jump
-		if (!stunned && buttonA && releasedA && (playerObject.zPosition === 0 || standingOnAppliance)) {
+		if (
+			!stunned &&
+			buttonA &&
+			releasedA &&
+			(playerObject.zPosition === 0 || standingOnAppliance)
+		) {
 			zSpeedChange += 0.35;
 			playerObject.zSpeed = zSpeedChange;
 		}
@@ -2467,8 +2888,12 @@ let gameLogic = (gs) => {
 			playerObject.xSpeed *= 0.95;
 			playerObject.ySpeed *= 0.95;
 		}
-		playerObject.xTarget = Math.round(playerObject.xPosition + Math.cos(playerObject.rotation));
-		playerObject.yTarget = Math.round(playerObject.yPosition + Math.sin(playerObject.rotation));
+		playerObject.xTarget = Math.round(
+			playerObject.xPosition + Math.cos(playerObject.rotation),
+		);
+		playerObject.yTarget = Math.round(
+			playerObject.yPosition + Math.sin(playerObject.rotation),
+		);
 		playerObject.zTarget = Math.round(playerObject.zPosition);
 
 		if (playerObject.itemCooldown > 0) {
@@ -2491,8 +2916,7 @@ let gameLogic = (gs) => {
 					doInteraction = true;
 				}
 				//playerObject.interactReleased = false;
-			}
-			else {
+			} else {
 				//playerObject.interactReleased = true;
 			}
 			// Left click - Light, Medium attack, interact if no item
@@ -2516,8 +2940,7 @@ let gameLogic = (gs) => {
 				}
 				playerObject.fireReleased = false;
 				*/
-			}
-			else {
+			} else {
 				//playerObject.fireReleased = true;
 			}
 			// Q - Special
@@ -2528,8 +2951,7 @@ let gameLogic = (gs) => {
 				}
 				playerObject.specialReleased = false;
 				*/
-			}
-			else {
+			} else {
 				//playerObject.specialReleased = true;
 			}
 			// R - utility action, reload or parry
@@ -2540,8 +2962,7 @@ let gameLogic = (gs) => {
 				}
 				playerObject.reloadReleased = false;
 				*/
-			}
-			else {
+			} else {
 				//playerObject.reloadReleased = true;
 			}
 			// R1 - Light attack
@@ -2566,38 +2987,60 @@ let gameLogic = (gs) => {
 			// Grab input: try to grab or put down an item
 			// Grab from appliances
 			gs.applianceList.forEach((applianceObject) => {
-				if (playerObject.xTarget === applianceObject.xPosition && playerObject.yTarget === applianceObject.yPosition) {
+				if (
+					playerObject.xTarget === applianceObject.xPosition &&
+					playerObject.yTarget === applianceObject.yPosition
+				) {
 					// Supply appliances - copy item when picking up, delete item when putting down, never remove item from supply
 					// Can only put item down onto same type of supply
 					if (applianceObject.subType === "supply") {
-						if (playerObject.holdingItem && applianceObject.holdingItem && playerObject.heldItem.subType === applianceObject.heldItem.subType) {
+						if (
+							playerObject.holdingItem &&
+							applianceObject.holdingItem &&
+							playerObject.heldItem.subType === applianceObject.heldItem.subType
+						) {
 							// Delete player's held item
 							transferItem(gs, playerObject, undefined, playerObject.heldItem);
-						}
-						else if (!playerObject.holdingItem && applianceObject.holdingItem) {
+						} else if (
+							!playerObject.holdingItem &&
+							applianceObject.holdingItem
+						) {
 							// Pick up copy of item
 							let newItem = createItem(gs, applianceObject.heldItem.subType);
 							transferItem(gs, undefined, playerObject, newItem);
 						}
-					}
-                    else if (applianceObject.subType === "wall") {
+					} else if (applianceObject.subType === "wall") {
 						// Walls: No interaction
-                    }
-					else {
+					} else {
 						if (playerObject.holdingItem && !applianceObject.holdingItem) {
 							// Put down object
-							transferItem(gs, playerObject, applianceObject, playerObject.heldItem);
-						}
-						else if (!playerObject.holdingItem && applianceObject.holdingItem) {
+							transferItem(
+								gs,
+								playerObject,
+								applianceObject,
+								playerObject.heldItem,
+							);
+						} else if (
+							!playerObject.holdingItem &&
+							applianceObject.holdingItem
+						) {
 							// Pick up object
-							transferItem(gs, applianceObject, playerObject, applianceObject.heldItem);
+							transferItem(
+								gs,
+								applianceObject,
+								playerObject,
+								applianceObject.heldItem,
+							);
 						}
 					}
 				}
 			});
 			// Grab from plants
-			gs.plantList.forEach(plantObject => {
-				if (playerObject.xTarget === plantObject.xPosition && playerObject.yTarget === plantObject.yPosition) {
+			gs.plantList.forEach((plantObject) => {
+				if (
+					playerObject.xTarget === plantObject.xPosition &&
+					playerObject.yTarget === plantObject.yPosition
+				) {
 					// Can only take from plant, not put arbitrary items back down
 					if (!playerObject.holdingItem && plantObject.holdingItem) {
 						// Pick up object
@@ -2605,12 +3048,10 @@ let gameLogic = (gs) => {
 					}
 				}
 			});
-		}
-		else if (doLightAttack) {
+		} else if (doLightAttack) {
 			playerObject.lightAttacking = true;
 			playerObject.attackStun = 20;
-		}
-		else if (doMediumAttack) {
+		} else if (doMediumAttack) {
 			playerObject.mediumAttacking = true;
 			playerObject.attackStun = 40;
 			/*
@@ -2663,16 +3104,13 @@ let gameLogic = (gs) => {
 				});
 			}
 			*/
-		}
-		else if (doSpecialAttack) {
+		} else if (doSpecialAttack) {
 			playerObject.specialAttacking = true;
 			playerObject.attackStun = 15;
-		}
-		else if (doReload) {
+		} else if (doReload) {
 			playerObject.reloading = true;
 			playerObject.reloadStun = 15;
-		}
-		else if (doRoll) {
+		} else if (doRoll) {
 			playerObject.rolling = true;
 			playerObject.rollStun = 15;
 			// Set roll movement vector
@@ -2687,7 +3125,11 @@ let gameLogic = (gs) => {
 		}
 		// Decrement various stun timers
 		// Action stun timers
-		if (playerObject.lightAttacking || playerObject.mediumAttacking || playerObject.specialAttacking) {
+		if (
+			playerObject.lightAttacking ||
+			playerObject.mediumAttacking ||
+			playerObject.specialAttacking
+		) {
 			playerObject.attackStun -= 1;
 			if (playerObject.attackStun <= 0) {
 				playerObject.lightAttacking = false;
@@ -2795,95 +3237,125 @@ let gameLogic = (gs) => {
 
 			}*/
 		}
-        // Update previous mouse position to the current position
-        playerObject.xMousePrevPosition = playerObject.xMousePosition;
-        playerObject.yMousePrevPosition = playerObject.yMousePosition;
-        // Track team defeated status
-        if (playerObject.team === 1) {
-            team1AnyPlayers = true;
-            if (!playerObject.defeated) {
-                team1AllDefeated = false;
-            }
-        }
-        if (playerObject.team === 2) {
-            team2AnyPlayers = true;
-            if (!playerObject.defeated) {
-                team2AllDefeated = false;
-            }
-        }
+		// Update previous mouse position to the current position
+		playerObject.xMousePrevPosition = playerObject.xMousePosition;
+		playerObject.yMousePrevPosition = playerObject.yMousePosition;
+		// Track team defeated status
+		if (playerObject.team === 1) {
+			team1AnyPlayers = true;
+			if (!playerObject.defeated) {
+				team1AllDefeated = false;
+			}
+		}
+		if (playerObject.team === 2) {
+			team2AnyPlayers = true;
+			if (!playerObject.defeated) {
+				team2AllDefeated = false;
+			}
+		}
 	});
-	gs.enemyList.forEach(enemyObject => {
+	gs.enemyList.forEach((enemyObject) => {
 		// Enemy states: idle, chase, attack, stunned, angry
 		if (enemyObject.state === "idle") {
 			enemyObject.stateTimer += 1;
 			if (enemyObject.stateTimer > 10) {
 				// Pick a player to chase
-				let potentialTargetPlayer = gs.playerList[Math.floor(deterministicRandom(gs) * gs.playerList.length)];
+				let potentialTargetPlayer =
+					gs.playerList[
+						Math.floor(deterministicRandom(gs) * gs.playerList.length)
+					];
 				if (potentialTargetPlayer !== undefined) {
 					enemyObject.targetPlayer = potentialTargetPlayer;
 					enemyObject.state = "chase";
 					enemyObject.stateTimer = 0;
 				}
 			}
-		}
-		else if (enemyObject.state === "chase") {
+		} else if (enemyObject.state === "chase") {
 			let angleToTarget = Math.atan2(
 				enemyObject.targetPlayer.yPosition - enemyObject.yPosition,
-				enemyObject.targetPlayer.xPosition - enemyObject.xPosition
+				enemyObject.targetPlayer.xPosition - enemyObject.xPosition,
 			);
 			let xSpeedChange = Math.cos(angleToTarget) * 0.004;
 			let ySpeedChange = Math.sin(angleToTarget) * 0.004;
 			enemyObject.xSpeed += xSpeedChange;
 			enemyObject.ySpeed += ySpeedChange;
 			enemyObject.rotation = angleToTarget;
-			let xDist = Math.abs(enemyObject.targetPlayer.xPosition - enemyObject.xPosition);
-			let yDist = Math.abs(enemyObject.targetPlayer.yPosition - enemyObject.yPosition);
+			let xDist = Math.abs(
+				enemyObject.targetPlayer.xPosition - enemyObject.xPosition,
+			);
+			let yDist = Math.abs(
+				enemyObject.targetPlayer.yPosition - enemyObject.yPosition,
+			);
 			if (xDist < 4.5 && yDist < 4.5) {
 				enemyObject.state = "attack";
 				enemyObject.stateTimer = 0;
 			}
-		}
-		else if (enemyObject.state === "attack") {
+		} else if (enemyObject.state === "attack") {
 			enemyObject.stateTimer += 1;
 			if (enemyObject.stateTimer % 20 === 0) {
-				let projectileObject = createProjectile(gs, "swordSwing", enemyObject.xPosition, enemyObject.yPosition, enemyObject.rotation, 0.1);
+				let projectileObject = createProjectile(
+					gs,
+					"swordSwing",
+					enemyObject.xPosition,
+					enemyObject.yPosition,
+					enemyObject.rotation,
+					0.1,
+				);
 				projectileObject.sourceIsEnemy = true;
 			}
 			if (enemyObject.stateTimer > 62) {
 				enemyObject.state = "idle";
 				enemyObject.stateTimer = 0;
 			}
-		}
-		else if (enemyObject.state === "stunned") {
+		} else if (enemyObject.state === "stunned") {
 			enemyObject.stateTimer += 1;
 			if (enemyObject.stateTimer > 90) {
 				enemyObject.state = "angry";
 				enemyObject.stateTimer = 0;
 				enemyObject.stagger = 0;
 			}
-		}
-		else if (enemyObject.state === "angry") {
+		} else if (enemyObject.state === "angry") {
 			enemyObject.stateTimer += 1;
 			enemyObject.stagger = 0;
 			if (enemyObject.stateTimer % 11 === 0) {
 				// Straight
-				let projectileObject1 = createProjectile(gs, "swordSwing", enemyObject.xPosition, enemyObject.yPosition, enemyObject.rotation, 0.1);
+				let projectileObject1 = createProjectile(
+					gs,
+					"swordSwing",
+					enemyObject.xPosition,
+					enemyObject.yPosition,
+					enemyObject.rotation,
+					0.1,
+				);
 				projectileObject1.sourceIsEnemy = true;
 				// Angled Left
 				let rotation2 = wrapRotationToPiBounds(enemyObject.rotation + 0.23);
-				let projectileObject2 = createProjectile(gs, "swordSwing", enemyObject.xPosition, enemyObject.yPosition, rotation2, 0.1);
+				let projectileObject2 = createProjectile(
+					gs,
+					"swordSwing",
+					enemyObject.xPosition,
+					enemyObject.yPosition,
+					rotation2,
+					0.1,
+				);
 				projectileObject2.sourceIsEnemy = true;
 				// Angled Right
 				let rotation3 = wrapRotationToPiBounds(enemyObject.rotation - 0.23);
-				let projectileObject3 = createProjectile(gs, "swordSwing", enemyObject.xPosition, enemyObject.yPosition, rotation3, 0.1);
+				let projectileObject3 = createProjectile(
+					gs,
+					"swordSwing",
+					enemyObject.xPosition,
+					enemyObject.yPosition,
+					rotation3,
+					0.1,
+				);
 				projectileObject3.sourceIsEnemy = true;
 			}
 			if (enemyObject.stateTimer > 100) {
 				enemyObject.state = "idle";
 				enemyObject.stateTimer = 0;
 			}
-		}
-		else if (enemyObject.state === "defeat") {
+		} else if (enemyObject.state === "defeat") {
 			enemyObject.stateTimer += 1;
 			if (enemyObject.stateTimer > 60) {
 				enemyObject.toBeRemoved = true;
@@ -2898,9 +3370,13 @@ let gameLogic = (gs) => {
 		if (enemyObject.state !== "stunned") {
 			enemyObject.stagger *= 0.995;
 		}
-		
+
 		// Change state on conditions
-		if (enemyObject.stagger > enemyObject.maxStagger && !enemyObject.defeated && enemyObject.state !== "stunned") {
+		if (
+			enemyObject.stagger > enemyObject.maxStagger &&
+			!enemyObject.defeated &&
+			enemyObject.state !== "stunned"
+		) {
 			enemyObject.state = "stunned";
 			enemyObject.stateTimer = 0;
 		}
@@ -2919,15 +3395,19 @@ let gameLogic = (gs) => {
 		let ySpot = Math.sin(randAngle) * 20;
 		let newEnemy = createEnemy(gs, "enemy1", xSpot, ySpot);
 	}*/
-	gs.plantList.forEach(plantObject => {
-		// Plants 
+	gs.plantList.forEach((plantObject) => {
+		// Plants
 		// Grow over time
 		if (!plantObject.doneGrowing) {
 			// About 30 seconds?
 			//plantObject.growth += 0.005;
 			plantObject.growth += 0.1;
 			// At full growth, create product item as held item
-			if (!plantObject.producedItem && !plantObject.holdingItem && plantObject.growth > plantObject.maxGrowth) {
+			if (
+				!plantObject.producedItem &&
+				!plantObject.holdingItem &&
+				plantObject.growth > plantObject.maxGrowth
+			) {
 				plantObject.producedItem = true;
 				plantObject.doneGrowing = true;
 				let newItemCopy = createItem(gs, "sword");
@@ -2935,28 +3415,37 @@ let gameLogic = (gs) => {
 			}
 		}
 	});
-	gs.projectileList.forEach(projectileObject => {
+	gs.projectileList.forEach((projectileObject) => {
 		// Adjust speed (for certain types)
 		if (projectileObject.subType === "fire_bomb_toss") {
 			projectileObject.speed *= 0.9;
 		}
 		// Apply speed
-		projectileObject.xPosition += Math.cos(projectileObject.rotation) * projectileObject.speed;
-		projectileObject.yPosition += Math.sin(projectileObject.rotation) * projectileObject.speed;
+		projectileObject.xPosition +=
+			Math.cos(projectileObject.rotation) * projectileObject.speed;
+		projectileObject.yPosition +=
+			Math.sin(projectileObject.rotation) * projectileObject.speed;
 		// Test collisions against players
-		gs.playerList.forEach(playerObject => {
-            if (playerObject.defeated) {
-                return;
-            }
-			if (projectileObject.sourcePlayer !== playerObject && collisionTest(playerObject, projectileObject)) {
+		gs.playerList.forEach((playerObject) => {
+			if (playerObject.defeated) {
+				return;
+			}
+			if (
+				projectileObject.sourcePlayer !== playerObject &&
+				collisionTest(playerObject, projectileObject)
+			) {
 				if (projectileObject.subType === "fire_bomb_explosion") {
 					playerObject.health -= 0.05;
-				}
-				else {
+				} else {
 					// Subtract 1 health from player
 					playerObject.health -= 1;
 					// Create hit effect
-					createEffect(gs, "hit", projectileObject.xPosition, projectileObject.yPosition);
+					createEffect(
+						gs,
+						"hit",
+						projectileObject.xPosition,
+						projectileObject.yPosition,
+					);
 					// Remove projectile
 					projectileObject.toBeRemoved = true;
 					anyRemovals = true;
@@ -2965,22 +3454,50 @@ let gameLogic = (gs) => {
 				if (playerObject.health <= 0) {
 					playerObject.defeated = true;
 					// Make a bunch of hit effects to show that the player is defeated
-					createEffect(gs, "hit", playerObject.xPosition, playerObject.yPosition);
-					createEffect(gs, "hit", playerObject.xPosition - 0.5, playerObject.yPosition);
-					createEffect(gs, "hit", playerObject.xPosition + 0.5, playerObject.yPosition);
-					createEffect(gs, "hit", playerObject.xPosition, playerObject.yPosition - 0.5);
-					createEffect(gs, "hit", playerObject.xPosition, playerObject.yPosition + 0.5);
+					createEffect(
+						gs,
+						"hit",
+						playerObject.xPosition,
+						playerObject.yPosition,
+					);
+					createEffect(
+						gs,
+						"hit",
+						playerObject.xPosition - 0.5,
+						playerObject.yPosition,
+					);
+					createEffect(
+						gs,
+						"hit",
+						playerObject.xPosition + 0.5,
+						playerObject.yPosition,
+					);
+					createEffect(
+						gs,
+						"hit",
+						playerObject.xPosition,
+						playerObject.yPosition - 0.5,
+					);
+					createEffect(
+						gs,
+						"hit",
+						playerObject.xPosition,
+						playerObject.yPosition + 0.5,
+					);
 				}
 			}
 		});
 		// Test collisions against enemies
-		gs.enemyList.forEach(enemyObject => {
+		gs.enemyList.forEach((enemyObject) => {
 			// Check that the projectile is from a player, and collides with the enemy, and the enemy isn't already defeated
-			if (!projectileObject.sourceIsEnemy && collisionTest(enemyObject, projectileObject) && !enemyObject.defeated) {
+			if (
+				!projectileObject.sourceIsEnemy &&
+				collisionTest(enemyObject, projectileObject) &&
+				!enemyObject.defeated
+			) {
 				if (projectileObject.subType === "fire_bomb_explosion") {
 					enemyObject.health -= 0.05;
-				}
-				else {
+				} else {
 					// Subtract health from enemy
 					enemyObject.health -= 1;
 					// Add stagger to enemy
@@ -2990,7 +3507,12 @@ let gameLogic = (gs) => {
 						enemyObject.defeated = true;
 					}
 					// Create hit effect
-					createEffect(gs, "hit", projectileObject.xPosition, projectileObject.yPosition);
+					createEffect(
+						gs,
+						"hit",
+						projectileObject.xPosition,
+						projectileObject.yPosition,
+					);
 					// Remove projectile
 					projectileObject.toBeRemoved = true;
 					anyRemovals = true;
@@ -2998,18 +3520,25 @@ let gameLogic = (gs) => {
 			}
 		});
 		// Test collisions against walls
-		gs.applianceList.filter(applianceObject => applianceObject.subType === "wall").forEach(applianceObject => {
-			if (projectileObject.subType === "fire_bomb_explosion") {
-				return;
-			}
-			if (collisionTest(applianceObject, projectileObject)) {
-				// Create hit effect
-				createEffect(gs, "hit", projectileObject.xPosition, projectileObject.yPosition);
-				// Remove projectile
-				projectileObject.toBeRemoved = true;
-				anyRemovals = true;
-			}
-		});
+		gs.applianceList
+			.filter((applianceObject) => applianceObject.subType === "wall")
+			.forEach((applianceObject) => {
+				if (projectileObject.subType === "fire_bomb_explosion") {
+					return;
+				}
+				if (collisionTest(applianceObject, projectileObject)) {
+					// Create hit effect
+					createEffect(
+						gs,
+						"hit",
+						projectileObject.xPosition,
+						projectileObject.yPosition,
+					);
+					// Remove projectile
+					projectileObject.toBeRemoved = true;
+					anyRemovals = true;
+				}
+			});
 		// Reduce lifespan and remove if time is up
 		projectileObject.lifespan -= 1;
 		if (projectileObject.lifespan <= 0) {
@@ -3017,86 +3546,110 @@ let gameLogic = (gs) => {
 			anyRemovals = true;
 		}
 		// Fire bomb: when destroyed, create a fire bomb explosion
-		if (projectileObject.subType === "fire_bomb_toss" && projectileObject.toBeRemoved) {
+		if (
+			projectileObject.subType === "fire_bomb_toss" &&
+			projectileObject.toBeRemoved
+		) {
 			//createEffect(gs, "hit", projectileObject.xPosition, projectileObject.yPosition);
-			let newProjectileObject = createProjectile(gs, "fire_bomb_explosion", projectileObject.xPosition, projectileObject.yPosition, 0, 0);
+			let newProjectileObject = createProjectile(
+				gs,
+				"fire_bomb_explosion",
+				projectileObject.xPosition,
+				projectileObject.yPosition,
+				0,
+				0,
+			);
 			newProjectileObject.sourcePlayer = projectileObject.sourcePlayer;
 		}
 	});
-	gs.enemyList.forEach(enemyObject => {
+	gs.enemyList.forEach((enemyObject) => {
 		if (enemyObject.toBeRemoved) {
 			anyRemovals = true;
 		}
 	});
-	gs.itemList.forEach(itemObject => {
+	gs.itemList.forEach((itemObject) => {
 		if (itemObject.toBeRemoved) {
 			anyRemovals = true;
 		}
 	});
 	// Removal loops
 	if (anyRemovals) {
-		gs.playerList.filter(playerObject => playerObject.toBeRemoved).forEach(playerObject => {removePlayer(gs, playerObject);});
-		gs.projectileList.filter(projectileObject => projectileObject.toBeRemoved).forEach(projectileObject => {removeProjectile(gs, projectileObject);});
-		gs.applianceList.filter(applianceObject => applianceObject.toBeRemoved).forEach(applianceObject => {removeAppliance(gs, applianceObject);});
-		gs.itemList.filter(itemObject => itemObject.toBeRemoved).forEach(itemObject => {removeItem(gs, itemObject);});
+		gs.playerList
+			.filter((playerObject) => playerObject.toBeRemoved)
+			.forEach((playerObject) => {
+				removePlayer(gs, playerObject);
+			});
+		gs.projectileList
+			.filter((projectileObject) => projectileObject.toBeRemoved)
+			.forEach((projectileObject) => {
+				removeProjectile(gs, projectileObject);
+			});
+		gs.applianceList
+			.filter((applianceObject) => applianceObject.toBeRemoved)
+			.forEach((applianceObject) => {
+				removeAppliance(gs, applianceObject);
+			});
+		gs.itemList
+			.filter((itemObject) => itemObject.toBeRemoved)
+			.forEach((itemObject) => {
+				removeItem(gs, itemObject);
+			});
 		// effects are dealt with earlier
 		//gs.effectList.filter(effectObject => effectObject.toBeRemoved).forEach(effectObject => {removeEffect(gs, effectObject);});
-		gs.enemyList.filter(enemyObject => enemyObject.toBeRemoved).forEach(enemyObject => {removeEnemy(gs, enemyObject);});
+		gs.enemyList
+			.filter((enemyObject) => enemyObject.toBeRemoved)
+			.forEach((enemyObject) => {
+				removeEnemy(gs, enemyObject);
+			});
 	}
-    // Check for victory conditions
-    let team1Win = false;
-    let team2Win = false;
-    if (team1AnyPlayers && team1AllDefeated) {
-        team2Win = true;
-    }
-    if (team2AnyPlayers && team2AllDefeated) {
-        team1Win = true;
-    }
+	// Check for victory conditions
+	let team1Win = false;
+	let team2Win = false;
+	if (team1AnyPlayers && team1AllDefeated) {
+		team2Win = true;
+	}
+	if (team2AnyPlayers && team2AllDefeated) {
+		team1Win = true;
+	}
 	// Testing a team winning
 	if (gs.testWinFrame !== undefined) {
 		if (gs.frameCount === gs.testWinFrame) {
 			if (gs.testWinTeam === 1) {
 				team1Win = true;
-			}
-			else if (gs.testWinTeam === 2) {
+			} else if (gs.testWinTeam === 2) {
 				team2Win = true;
-			}
-			else {
+			} else {
 				team1Win = true;
 				team2Win = true;
 			}
 		}
 	}
 	// Effects of a team winning
-    if (team1Win || team2Win) {
-        gs.gameActive = false;
-        if (team1Win && !team2Win) {
-            gs.roundWinner = 1;
-            gs.team1Score += 1;
-            if (gs.team1Score >= 3) {
-                gs.gameFinished = true;
-                gs.gameWinner = 1;
-            }
-            else {
-                gs.roundEndCountdown = 240;
-            }
-        }
-        else if (team2Win && !team1Win) {
-            gs.roundWinner = 2;
-            gs.team2Score += 1;
-            if (gs.team2Score >= 3) {
-                gs.gameFinished = true;
-                gs.gameWinner = 2;
-            }
-            else {
-                gs.roundEndCountdown = 240;
-            }
-        }
-        else {
-            gs.roundWinner = "It's a tie";
-        }
-    }
-}
+	if (team1Win || team2Win) {
+		gs.gameActive = false;
+		if (team1Win && !team2Win) {
+			gs.roundWinner = 1;
+			gs.team1Score += 1;
+			if (gs.team1Score >= 3) {
+				gs.gameFinished = true;
+				gs.gameWinner = 1;
+			} else {
+				gs.roundEndCountdown = 240;
+			}
+		} else if (team2Win && !team1Win) {
+			gs.roundWinner = 2;
+			gs.team2Score += 1;
+			if (gs.team2Score >= 3) {
+				gs.gameFinished = true;
+				gs.gameWinner = 2;
+			} else {
+				gs.roundEndCountdown = 240;
+			}
+		} else {
+			gs.roundWinner = "It's a tie";
+		}
+	}
+};
 let transferItem = (gs, oldHolder, newHolder, item) => {
 	if (!!oldHolder) {
 		oldHolder.heldItem = undefined;
@@ -3109,20 +3662,17 @@ let transferItem = (gs, oldHolder, newHolder, item) => {
 			item.heldByPlayer = true;
 			item.heldByAppliance = false;
 			item.heldByPlant = false;
-		}
-		else if (newHolder.type === "appliance") {
+		} else if (newHolder.type === "appliance") {
 			item.heldByPlayer = false;
 			item.heldByAppliance = true;
 			item.heldByPlant = false;
-		}
-		else if (newHolder.type === "plant") {
+		} else if (newHolder.type === "plant") {
 			item.heldByPlayer = false;
 			item.heldByAppliance = false;
 			item.heldByPlant = true;
 		}
 		item.holder = newHolder;
-	}
-	else {
+	} else {
 		// Remove item if no new holder
 		item.toBeRemoved = true;
 		item.heldByPlayer = false;
@@ -3130,10 +3680,10 @@ let transferItem = (gs, oldHolder, newHolder, item) => {
 		item.heldByPlant = false;
 		item.holder = undefined;
 	}
-}
+};
 let deterministicRandom = (gs) => {
 	return (((gs.frameCount + 4301) * 2731) % 2903) / 2903;
-}
+};
 let wrapRotationToPiBounds = (rotation) => {
 	if (rotation > Math.PI) {
 		rotation -= Math.PI * 2;
@@ -3141,98 +3691,78 @@ let wrapRotationToPiBounds = (rotation) => {
 	if (rotation < -Math.PI) {
 		rotation += Math.PI * 2;
 	}
-	return rotation
-}
+	return rotation;
+};
 
 let inputChanged = false;
 let keyDownFunction = (event) => {
 	if (event.keyCode === 87 && !wDown) {
 		wDown = true;
-	}
-	else if (event.keyCode === 65 && !aDown) {
+	} else if (event.keyCode === 65 && !aDown) {
 		aDown = true;
-	}
-	else if (event.keyCode === 83 && !sDown) {
+	} else if (event.keyCode === 83 && !sDown) {
 		sDown = true;
-	}
-	else if (event.keyCode === 68 && !dDown) {
+	} else if (event.keyCode === 68 && !dDown) {
 		dDown = true;
-	}
-	else if (event.keyCode === 69 && !eDown) {
+	} else if (event.keyCode === 69 && !eDown) {
 		eDown = true;
-	}
-	else if (event.keyCode === 82 && !rDown) {
+	} else if (event.keyCode === 82 && !rDown) {
 		rDown = true;
-	}
-	else if (event.keyCode === 70 && !fDown) {
+	} else if (event.keyCode === 70 && !fDown) {
 		fDown = true;
-	}
-	else if (event.keyCode === 81 && !fDown) {
+	} else if (event.keyCode === 81 && !fDown) {
 		qDown = true;
-	}
-	else if (event.keyCode === 16 && !shiftDown) {
+	} else if (event.keyCode === 16 && !shiftDown) {
 		shiftDown = true;
-	}
-	else {
+	} else {
 		return;
 	}
 	inputChanged = true;
-}
+};
 let keyUpFunction = (event) => {
 	if (event.keyCode === 87) {
 		wDown = false;
-	}
-	else if (event.keyCode === 65) {
+	} else if (event.keyCode === 65) {
 		aDown = false;
-	}
-	else if (event.keyCode === 83) {
+	} else if (event.keyCode === 83) {
 		sDown = false;
-	}
-	else if (event.keyCode === 68) {
+	} else if (event.keyCode === 68) {
 		dDown = false;
-	}
-	else if (event.keyCode === 69) {
+	} else if (event.keyCode === 69) {
 		eDown = false;
-	}
-	else if (event.keyCode === 82) {
+	} else if (event.keyCode === 82) {
 		rDown = false;
-	}
-	else if (event.keyCode === 70) {
+	} else if (event.keyCode === 70) {
 		fDown = false;
-	}
-	else if (event.keyCode === 81) {
+	} else if (event.keyCode === 81) {
 		qDown = false;
-	}
-	else if (event.keyCode === 16) {
+	} else if (event.keyCode === 16) {
 		shiftDown = false;
-	}
-	else {
+	} else {
 		return;
 	}
 	inputChanged = true;
-}
+};
 let mouseDownFunction = (event) => {
 	if (event.button === 0) {
 		if (!leftMouseDown) {
 			inputChanged = true;
 		}
 		leftMouseDown = true;
-	}
-	else if (event.button === 2) {
+	} else if (event.button === 2) {
 		if (!rightMouseDown) {
 			inputChanged = true;
 		}
 		rightMouseDown = true;
 	}
-}
+};
 let mouseUpFunction = (event) => {
 	if (event.button === 0) {
 		if (leftMouseDown) {
 			inputChanged = true;
 		}
 		leftMouseDown = false;
-	}
-	else if (event.button === 2) {
+	} else if (event.button === 2) {
 		if (rightMouseDown) {
 			inputChanged = true;
 		}
@@ -3242,35 +3772,35 @@ let mouseUpFunction = (event) => {
 		inputChanged = true;
 	}
 	mouseDown = false;*/
-}
+};
 let mouseMoveFunction = (event) => {
 	if (event.clientX !== xMouseScreen || event.clientY !== yMouseScreen) {
 		inputChanged = true;
 	}
 	xMouseScreen = event.x || event.clientX;
 	yMouseScreen = event.y || event.clientY;
-}
+};
 
 let contextMenuFunction = (event) => {
 	if (gameStarted) {
 		event.preventDefault();
 		return false;
 	}
-}
+};
 
 let resizeFunction = (event) => {
 	renderer.setSize(window.innerWidth, window.innerHeight);
 	camera.aspect = window.innerWidth / window.innerHeight;
 	camera.updateProjectionMatrix();
-}
+};
 
 let gamepadconnectedFunction = (event) => {
 	gamepads = navigator.getGamepads();
-}
+};
 
 let gamepaddisconnectedFunction = (event) => {
 	gamepads = navigator.getGamepads();
-}
+};
 
 let meshToScreenCoordinates = (mesh) => {
 	let vector = new THREE.Vector3();
@@ -3278,8 +3808,11 @@ let meshToScreenCoordinates = (mesh) => {
 	vector.setFromMatrixPosition(mesh.matrixWorld);
 	vector.project(camera);
 	//not using window.devicePixelRatio for now
-	return new THREE.Vector2(Math.round((0.5 + vector.x / 2) * window.innerWidth), Math.round((0.5 - vector.y / 2) * window.innerHeight));
-}
+	return new THREE.Vector2(
+		Math.round((0.5 + vector.x / 2) * window.innerWidth),
+		Math.round((0.5 - vector.y / 2) * window.innerHeight),
+	);
+};
 let socket = undefined;
 let connected = false;
 let setupNetworkConnection = () => {
@@ -3289,17 +3822,18 @@ let setupNetworkConnection = () => {
 		if (location.href.indexOf("kramff.com") !== -1) {
 			wsProtocol = "wss://";
 			socketURL = wsProtocol + "bine.nfshost.com/Fighting3Dgame/";
-		}
-		else {
+		} else {
 			wsProtocol = "ws://";
-			socketURL = (location.protocol + "//" + location.host + "/").replace(/\d+\/$/, "8034").replace("http://", wsProtocol);
+			socketURL = (location.protocol + "//" + location.host + "/")
+				.replace(/\d+\/$/, "8034")
+				.replace("http://", wsProtocol);
 		}
 		socket = new WebSocket(socketURL);
 		socket.onopen = (data) => {
 			console.log("connected to server!");
 			connected = true;
 			makeRoomButton.disabled = undefined;
-		}
+		};
 		socket.onmessage = (message) => {
 			let messageParse = JSON.parse(message.data);
 			let messageType = messageParse.type;
@@ -3309,13 +3843,21 @@ let setupNetworkConnection = () => {
 				localPlayerID = messageData;
 				// Remove local player from playerFrameAdvantages list if still in there
 				// playerFrameAdvantages = playerFrameAdvantages.filter(entry => entry.id !== localPlayerID);
-			}
-			else if (messageType === "roomInfo") {
+			} else if (messageType === "roomInfo") {
 				if (Array.isArray(messageData)) {
-					messageData.forEach(roomData => {makeRoomOption(roomData.roomName, roomData.roomID, roomData.gameStarted)})
-				}
-				else {
-					makeRoomOption(messageData.roomName, messageData.roomID, messageData.gameStarted);
+					messageData.forEach((roomData) => {
+						makeRoomOption(
+							roomData.roomName,
+							roomData.roomID,
+							roomData.gameStarted,
+						);
+					});
+				} else {
+					makeRoomOption(
+						messageData.roomName,
+						messageData.roomID,
+						messageData.gameStarted,
+					);
 				}
 			}
 			// room removed
@@ -3324,12 +3866,14 @@ let setupNetworkConnection = () => {
 			}
 			// room information (other players joining / leaving the waiting room or switching teams)
 			else if (messageType === "roomStatusPlayerJoin") {
-				makePlayerEntry(messageData.playerName, messageData.playerID, messageData.playerTeam || 1);
-			}
-			else if (messageType === "roomStatusPlayerLeave") {
+				makePlayerEntry(
+					messageData.playerName,
+					messageData.playerID,
+					messageData.playerTeam || 1,
+				);
+			} else if (messageType === "roomStatusPlayerLeave") {
 				removePlayerEntry(messageData);
-			}
-			else if (messageType === "roomStatusSwitchTeam") {
+			} else if (messageType === "roomStatusSwitchTeam") {
 				switchPlayerTeam(messageData.playerID, messageData.team);
 			}
 			// game starting
@@ -3339,18 +3883,22 @@ let setupNetworkConnection = () => {
 				gameStartPlayerInfo = messageData;
 				gameStarted = true;
 				currentGameState = createGameState();
-                window["cgsref"] = currentGameState;
+				window["cgsref"] = currentGameState;
 				let initInfo = initializeGameState(currentGameState);
 				playerFrameAdvantages = [];
-				gameStartPlayerInfo.forEach(playerData => {
-					let newPlayerObject = createPlayer(currentGameState, playerData.playerName, playerData.playerID, playerData.playerTeam);
+				gameStartPlayerInfo.forEach((playerData) => {
+					let newPlayerObject = createPlayer(
+						currentGameState,
+						playerData.playerName,
+						playerData.playerID,
+						playerData.playerTeam,
+					);
 					if (newPlayerObject.team === 1) {
 						newPlayerObject.xPosition = initInfo.t1x;
 						newPlayerObject.xStartPosition = initInfo.t1x;
 						newPlayerObject.yPosition = initInfo.t1y;
 						newPlayerObject.yStartPosition = initInfo.t1y;
-					}
-					else if (newPlayerObject.team === 2) {
+					} else if (newPlayerObject.team === 2) {
 						newPlayerObject.xPosition = initInfo.t2x;
 						newPlayerObject.xStartPosition = initInfo.t2x;
 						newPlayerObject.yPosition = initInfo.t2y;
@@ -3358,7 +3906,10 @@ let setupNetworkConnection = () => {
 					}
 					// Don't add local player to playerFrameAdvantages
 					if (playerData.playerID !== localPlayerID) {
-						playerFrameAdvantages.push({id: playerData.playerID, frameAdvantage: 0});
+						playerFrameAdvantages.push({
+							id: playerData.playerID,
+							frameAdvantage: 0,
+						});
 					}
 				});
 				// copy the initial game state to reset to it later
@@ -3375,8 +3926,11 @@ let setupNetworkConnection = () => {
 					rollbackInputReceived = true;
 				}
 				// Calculate remoteFrameLag
-				let remoteFrameLag = (messageData.frameCount - inputDelay) - currentFrameCount;
-				let playerEntry = playerFrameAdvantages.find(entry => entry.id === messageData.id);
+				let remoteFrameLag =
+					messageData.frameCount - inputDelay - currentFrameCount;
+				let playerEntry = playerFrameAdvantages.find(
+					(entry) => entry.id === messageData.id,
+				);
 				playerEntry.frameAdvantage = remoteFrameLag;
 			}
 			// other player quitting
@@ -3395,8 +3949,13 @@ let setupNetworkConnection = () => {
 			// other player used the desync eval tool
 			else if (messageType === "desyncTool") {
 				// send whole game state history
-				console.log("Other player requested full game state history for desync detector tool");
-				sendData("gameStateHistory", gameStateHistory.map(copyGameStateNoCircularRef));
+				console.log(
+					"Other player requested full game state history for desync detector tool",
+				);
+				sendData(
+					"gameStateHistory",
+					gameStateHistory.map(copyGameStateNoCircularRef),
+				);
 				console.log("Sent game state history...");
 			}
 			// other player sending game state history
@@ -3410,18 +3969,25 @@ let setupNetworkConnection = () => {
 						return;
 					}
 					if (gameStateHistory.length <= index) {
-						console.log("remote gameStateHistory ran out of states without finding a desync");
-						console.log(`local: ${gameStateHistory.length} frames, remote: ${messageData.length} frames`);
+						console.log(
+							"remote gameStateHistory ran out of states without finding a desync",
+						);
+						console.log(
+							`local: ${gameStateHistory.length} frames, remote: ${messageData.length} frames`,
+						);
 						foundDesync = true;
 						return;
 					}
-					let statesDifferent = compareGameStates(gameStateHistory[index], otherGameState);
+					let statesDifferent = compareGameStates(
+						gameStateHistory[index],
+						otherGameState,
+					);
 					if (statesDifferent) {
 						console.log(`Desync detected at frame ${index}`);
 						console.log(gameStateHistory[index]);
 						console.log(otherGameState);
 						console.log("Full game state histories:");
-						console.log(gameStateHistory)
+						console.log(gameStateHistory);
 						console.log(messageData);
 						foundDesync = true;
 					}
@@ -3429,24 +3995,20 @@ let setupNetworkConnection = () => {
 				if (!foundDesync) {
 					console.log("No desync detected!");
 				}
-			}
-			else if (messageType === "test_team_win") {
+			} else if (messageType === "test_team_win") {
 				currentGameState.testWinTeam = messageData.team;
 				currentGameState.testWinFrame = messageData.frameCount;
 			}
-		}
-	}
-	catch (error) {
+		};
+	} catch (error) {
 		console.error("Could not connect to server");
 		console.error(error);
 	}
-}
+};
 let sendData = (type, data) => {
 	if (!connected) {
 		return;
 	}
-	let sendObjStr = JSON.stringify({type: type, data: data});
+	let sendObjStr = JSON.stringify({ type: type, data: data });
 	socket.send(sendObjStr);
-}
-
-
+};
