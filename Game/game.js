@@ -1188,8 +1188,13 @@ let gameUI;
 
 let glTFLoader;
 
-let animMesh;
-let animMixer;
+//let animMesh;
+// let animMixer;
+
+let playerScene;
+let playerAnims;
+let playerAnimMixer;
+let playerAnimAction;
 
 let modelLoadList = [
 	{
@@ -1236,8 +1241,17 @@ let modelLoadList = [
 	{
 		model: "Low-Poly-Base_copy.glb",
 		name: "player_model",
-		setLoad: (load) => {
+		setScene: (loadScene, loadAnim) => {
 			// Load model
+			playerScene = loadScene;
+			window["playerScene"] = playerScene;
+			scene.add(playerScene);
+			playerScene.rotateX(Math.PI / 2);
+			// Load anims
+			playerAnims = loadAnim;
+			playerAnimMixer = new THREE.AnimationMixer(playerScene);
+			playerAnimAction = playerAnimMixer.clipAction(playerAnims[4]);
+			playerAnimAction.play();
 		},
 	},
 ];
@@ -1259,8 +1273,8 @@ let init = () => {
 					loadItem.setAnim(gltf.animations[0]);
 					cubeAnimGltf = gltf;
 				}
-				if (loadItem.setLoad !== undefined) {
-					scene.add(gltf.scene);
+				if (loadItem.setScene !== undefined) {
+					loadItem.setScene(gltf.scene, gltf.animations);
 				}
 				console.log(`${loadItem.name} model loaded`);
 			},
@@ -1495,9 +1509,9 @@ let init = () => {
 	sceneLight3 = new THREE.HemisphereLight(0xaabbff, 0xffbb90, 0.3);
 	scene.add(sceneLight3);
 
-	animMesh = new THREE.Mesh(cubeGeometry, fireBombMaterial);
-	animMesh.position.set(5, 5, 3);
-	scene.add(animMesh);
+	//animMesh = new THREE.Mesh(cubeGeometry, fireBombMaterial);
+	//animMesh.position.set(5, 5, 3);
+	//scene.add(animMesh);
 
 	addEventListener("keydown", keyDownFunction);
 	addEventListener("keyup", keyUpFunction);
@@ -1512,16 +1526,16 @@ let init = () => {
 };
 window.addEventListener("load", init);
 
-let tryAnim = () => {
+/*let tryAnim = () => {
 	window["cubeAnimGltf"] = cubeAnimGltf;
 	scene.add(cubeAnimGltf.scene);
 
 	animMixer = new THREE.AnimationMixer(cubeAnimGltf.scene);
 	let animAction = animMixer.clipAction(cubeAnimGltf.animations[0]);
 	animAction.play();
-};
+};*/
 
-window["tryAnim"] = tryAnim;
+// window["tryAnim"] = tryAnim;
 
 let levelLayout = [
 	"........................",
@@ -2093,9 +2107,10 @@ let removeUnneededOverlays = (gs) => {
 };
 
 let renderFrame = (gs) => {
-	if (animMixer !== undefined) {
-		animMixer.update(1 / 60 / 3);
-	}
+	// if (animMixer !== undefined) {
+	// animMixer.update(1 / 60 / 3);
+	// }
+	playerAnimMixer.update(1 / 60);
 	// Create meshes for all objects if they haven't been made yet
 	// (Done here to better support rollback)
 	createMissingMeshes(gs.playerList, createPlayerMesh);
@@ -2175,6 +2190,18 @@ let renderFrame = (gs) => {
 					applianceObject.connectedMesh.material = applianceObject.regularMat;
 				}
 			});
+			playerScene.position.set(
+				playerMesh.position.x,
+				playerMesh.position.y,
+				playerMesh.position.z,
+			);
+			playerScene.rotation.set(
+				playerMesh.rotation.x,
+				playerMesh.rotation.y,
+				playerMesh.rotation.z,
+			);
+			playerScene.rotateX(Math.PI / 2);
+			playerScene.rotateY(Math.PI / 2);
 		}
 	});
 	gs.itemList.forEach((itemObject) => {
@@ -2251,14 +2278,14 @@ let renderFrame = (gs) => {
 	// Third person camera
 	camera.position.set(
 		localPlayerMesh.position.x +
-			20 *
+			10 *
 				Math.sin(localPlayer.cameraRotation) *
 				Math.sin(localPlayer.cameraTilt),
 		localPlayerMesh.position.y -
-			20 *
+			10 *
 				Math.cos(localPlayer.cameraRotation) *
 				Math.sin(localPlayer.cameraTilt),
-		localPlayerMesh.position.z + 20 * Math.cos(localPlayer.cameraTilt),
+		localPlayerMesh.position.z + 10 * Math.cos(localPlayer.cameraTilt),
 	);
 	camera.lookAt(localPlayerMesh.position);
 
