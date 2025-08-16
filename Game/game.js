@@ -604,8 +604,8 @@ let createPlayer = (gs, name, id, team) => {
 		ySpeed: 0,
 		zSpeed: 0,
 		rotation: 0,
-		cameraRotation: 0,
-		cameraTilt: 0.1,
+		cameraRotation: 0.8,
+		cameraTilt: 0.8,
 		// Appliance targeting
 		xTarget: 0,
 		yTarget: 0,
@@ -1194,7 +1194,7 @@ let glTFLoader;
 let playerScene;
 let playerAnims;
 let playerAnimMixer;
-let playerAnimAction;
+let playerAnimActions;
 
 let modelLoadList = [
 	{
@@ -1244,14 +1244,15 @@ let modelLoadList = [
 		setScene: (loadScene, loadAnim) => {
 			// Load model
 			playerScene = loadScene;
-			window["playerScene"] = playerScene;
+			// window["playerScene"] = playerScene;
 			scene.add(playerScene);
 			playerScene.rotateX(Math.PI / 2);
 			// Load anims
 			playerAnims = loadAnim;
 			playerAnimMixer = new THREE.AnimationMixer(playerScene);
-			playerAnimAction = playerAnimMixer.clipAction(playerAnims[4]);
-			playerAnimAction.play();
+			playerAnimActions = playerAnims.map((animItem) =>
+				playerAnimMixer.clipAction(animItem),
+			);
 		},
 	},
 ];
@@ -2159,7 +2160,7 @@ let renderFrame = (gs) => {
 		playerMesh.rotation.y = 0;
 		playerMesh.rotation.z = playerObject.rotation;
 		if (playerObject.rolling) {
-			playerMesh.rotateY((-2 * Math.PI * playerObject.rollStun) / 15);
+			//playerMesh.rotateY((-2 * Math.PI * playerObject.rollStun) / 45);
 		}
 
 		if (playerObject.defeated) {
@@ -2193,7 +2194,7 @@ let renderFrame = (gs) => {
 			playerScene.position.set(
 				playerMesh.position.x,
 				playerMesh.position.y,
-				playerMesh.position.z,
+				playerMesh.position.z - 0.5,
 			);
 			playerScene.rotation.set(
 				playerMesh.rotation.x,
@@ -2202,6 +2203,52 @@ let renderFrame = (gs) => {
 			);
 			playerScene.rotateX(Math.PI / 2);
 			playerScene.rotateY(Math.PI / 2);
+			// Determine which animation to play
+			// Attacking "Stab" animation
+			let anyAnimPlaying = false;
+			if (
+				playerObject.lightAttacking ||
+				playerObject.mediumAttacking ||
+				playerObject.specialAttacking
+			) {
+				playerAnimActions[5].play();
+				anyAnimPlaying = true;
+			} else {
+				playerAnimActions[5].stop();
+			}
+			// Rolling
+			if (playerObject.rolling && !anyAnimPlaying) {
+				playerAnimActions[2].play();
+				anyAnimPlaying = true;
+				// Rotation for rolling
+				playerScene.rotateX((-2 * Math.PI * playerObject.rollStun) / 45);
+			} else {
+				playerAnimActions[2].stop();
+			}
+			// Jumping
+			if (playerObject.zSpeed > 0.1 && !anyAnimPlaying) {
+				playerAnimActions[0].play();
+				anyAnimPlaying = true;
+			} else {
+				playerAnimActions[0].stop();
+			}
+			// Walking
+			if (
+				(Math.abs(playerObject.xSpeed) > 0.01 ||
+					Math.abs(playerObject.ySpeed) > 0.01) &&
+				!anyAnimPlaying
+			) {
+				playerAnimActions[3].play();
+				anyAnimPlaying = true;
+			} else {
+				playerAnimActions[3].stop();
+			}
+			if (!anyAnimPlaying) {
+				// Nothing else: Standing
+				playerAnimActions[6].play();
+			} else {
+				playerAnimActions[6].stop();
+			}
 		}
 	});
 	gs.itemList.forEach((itemObject) => {
@@ -3077,10 +3124,10 @@ let gameLogic = (gs) => {
 			});
 		} else if (doLightAttack) {
 			playerObject.lightAttacking = true;
-			playerObject.attackStun = 20;
+			playerObject.attackStun = 45;
 		} else if (doMediumAttack) {
 			playerObject.mediumAttacking = true;
-			playerObject.attackStun = 40;
+			playerObject.attackStun = 45;
 			/*
 			// Fire button: Use held item (or make progress on something? probably remove that part)
 			if (playerObject.holdingItem && playerObject.heldItem.hasAbility) {
@@ -3133,13 +3180,13 @@ let gameLogic = (gs) => {
 			*/
 		} else if (doSpecialAttack) {
 			playerObject.specialAttacking = true;
-			playerObject.attackStun = 15;
+			playerObject.attackStun = 45;
 		} else if (doReload) {
 			playerObject.reloading = true;
 			playerObject.reloadStun = 15;
 		} else if (doRoll) {
 			playerObject.rolling = true;
-			playerObject.rollStun = 15;
+			playerObject.rollStun = 45;
 			// Set roll movement vector
 			playerObject.xRoll = leftStickX;
 			playerObject.yRoll = -leftStickY;
@@ -3176,8 +3223,8 @@ let gameLogic = (gs) => {
 		if (playerObject.rolling) {
 			playerObject.rollStun -= 1;
 			// Apply additional roll movement
-			playerObject.xSpeed += playerObject.xRoll * 0.03;
-			playerObject.ySpeed += playerObject.yRoll * 0.03;
+			playerObject.xSpeed += playerObject.xRoll * 0.02;
+			playerObject.ySpeed += playerObject.yRoll * 0.02;
 			if (playerObject.rollStun <= 0) {
 				playerObject.rolling = false;
 				playerObject.rollStun = 0;
