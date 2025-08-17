@@ -796,9 +796,9 @@ let createPlayerMesh = (playerObject) => {
 		matToUse = playerTeam2Material;
 	}
 	let playerMesh = new THREE.Mesh(cubeGeometry, matToUse);
-	playerMesh.scale.x = 0.8;
-	playerMesh.scale.y = 0.8;
-	playerMesh.scale.z = 0.8;
+	playerMesh.scale.x = 0.0018;
+	playerMesh.scale.y = 0.0018;
+	playerMesh.scale.z = 0.0018;
 	playerMesh.castShadow = true;
 	playerMesh.receiveShadow = true;
 	scene.add(playerMesh);
@@ -2221,12 +2221,15 @@ let renderFrame = (gs) => {
 				playerAnimActions[2].play();
 				anyAnimPlaying = true;
 				// Rotation for rolling
+				// let moveDir = new THREE.Vector3(0, 0, -1);
+				// playerScene.translateOnAxis(1, moveDir);
 				playerScene.rotateX((-2 * Math.PI * playerObject.rollStun) / 45);
+				// playerScene.translateOnAxis(-1, moveDir);
 			} else {
 				playerAnimActions[2].stop();
 			}
 			// Jumping
-			if (playerObject.zSpeed > 0.1 && !anyAnimPlaying) {
+			if (Math.abs(playerObject.zSpeed) > 0.1 && !anyAnimPlaying) {
 				playerAnimActions[0].play();
 				anyAnimPlaying = true;
 			} else {
