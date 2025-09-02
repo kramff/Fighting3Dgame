@@ -1153,10 +1153,13 @@ let rDown = false;
 let fDown = false;
 let qDown = false;
 let shiftDown = false;
+let spaceDown = false;
 
 // Mouse
 let xMouseScreen = 0;
 let yMouseScreen = 0;
+let xMouseMove = 0;
+let yMouseMove = 0;
 let leftMouseDown = false;
 let rightMouseDown = false;
 
@@ -1519,6 +1522,7 @@ let init = () => {
 	addEventListener("mousedown", mouseDownFunction);
 	addEventListener("mouseup", mouseUpFunction);
 	addEventListener("mousemove", mouseMoveFunction);
+	addEventListener("click", clickFunction);
 	addEventListener("contextmenu", contextMenuFunction);
 	addEventListener("resize", resizeFunction);
 	addEventListener("gamepadconnected", gamepadconnectedFunction);
@@ -1660,6 +1664,9 @@ let makePlayerEntry = (playerName, playerID, playerTeam) => {
 	newEntry.classList.add("player_entry");
 	newEntry.setAttribute("playerID", playerID);
 	newEntry.textContent = playerName;
+	if (playerName === "") {
+		newEntry.textContent = "Player";
+	}
 	let teamBox = teamBox1;
 	if (!!playerTeam && playerTeam === 2) {
 		teamBox = teamBox2;
@@ -1879,6 +1886,8 @@ let lastGamepadButtons = [
 	false,
 ];
 let newGamepadInput = false;
+let usingGamepad = false;
+let lastGamepadFrame = 0;
 
 let lastTime;
 let timeAccumulator = 0;
@@ -1886,7 +1895,8 @@ let frameTime = 1000 / 60;
 //let shouldResetToInitialState = false;
 let gameLoop = () => {
 	if (gameStarted && currentGameState !== undefined && !gamePaused) {
-		if (gamepads.length > 0) {
+		let usedGamepadNow = false;
+		if (gamepads.length > 0 && gamepads[0] !== null) {
 			let gamepadAxes = gamepads[0].axes;
 			let gamepadButtons = gamepads[0].buttons.map((btn) => btn.pressed);
 			let anyAxesDifferent = !gamepadAxes.every(
@@ -1897,10 +1907,74 @@ let gameLoop = () => {
 			);
 			if (anyAxesDifferent || anyButtonDifferent) {
 				//console.log("Controller changed");
+				usingGamepad = true;
+				usedGamepadNow = true;
 				lastGamepadAxes = gamepadAxes;
 				lastGamepadButtons = gamepadButtons;
 				newGamepadInput = true;
+				lastGamepadFrame = currentGameState.frameCount;
 			}
+		}
+		if (!usedGamepadNow) {
+			if (lastGamepadFrame + 100 < currentGameState.frameCount) {
+				usingGamepad = false;
+			}
+		}
+		if (!usingGamepad) {
+			// Use keyboard + mouse input instead, consider as gamepad inputs
+			// WASD for axes 0 and 1
+			lastGamepadAxes = [0, 0, 0, 0];
+			if (aDown) {
+				lastGamepadAxes[0] -= 1;
+			}
+			if (dDown) {
+				lastGamepadAxes[0] += 1;
+			}
+			if (wDown) {
+				lastGamepadAxes[1] -= 1;
+			}
+			if (sDown) {
+				lastGamepadAxes[1] += 1;
+			}
+			lastGamepadAxes[2] = xMouseMove / 10;
+			xMouseMove = 0;
+			/*if (Math.abs(lastGamepadAxes[2] > 1)) {
+				if (lastGamepadAxes[2] > 0) {
+					lastGamepadAxes[2] = 1;
+				} else {
+					lastGamepadAxes[2] = -1;
+				}
+			}*/
+			lastGamepadAxes[3] = yMouseMove / 10;
+			yMouseMove = 0;
+			/*if (Math.abs(lastGamepadAxes[3] > 1)) {
+				if (lastGamepadAxes[3] > 0) {
+					lastGamepadAxes[3] = 1;
+				} else {
+					lastGamepadAxes[3] = -1;
+				}
+			}*/
+			// Space, shift, E, Q, R, F for A, B, L1, L2, R1, R2
+			lastGamepadButtons = [
+				spaceDown,
+				shiftDown,
+				false,
+				false,
+				eDown,
+				rDown,
+				qDown,
+				fDown,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+			];
+			newGamepadInput = true;
 		}
 
 		// Do rollback simulations if needed
@@ -3791,6 +3865,8 @@ let keyDownFunction = (event) => {
 		qDown = true;
 	} else if (event.keyCode === 16 && !shiftDown) {
 		shiftDown = true;
+	} else if (event.keyCode === 32 && !spaceDown) {
+		spaceDown = true;
 	} else {
 		return;
 	}
@@ -3815,6 +3891,8 @@ let keyUpFunction = (event) => {
 		qDown = false;
 	} else if (event.keyCode === 16) {
 		shiftDown = false;
+	} else if (event.keyCode === 32) {
+		spaceDown = false;
 	} else {
 		return;
 	}
@@ -3850,12 +3928,20 @@ let mouseUpFunction = (event) => {
 	}
 	mouseDown = false;*/
 };
+let clickFunction = (event) => {
+	if (!usingGamepad && gameStarted && yMouseScreen > 60) {
+		document.body.requestPointerLock();
+	}
+};
 let mouseMoveFunction = (event) => {
 	if (event.clientX !== xMouseScreen || event.clientY !== yMouseScreen) {
 		inputChanged = true;
 	}
 	xMouseScreen = event.x || event.clientX;
 	yMouseScreen = event.y || event.clientY;
+	// move move reset to 0 when used by game for camera control, until then add any movements so full mouse movement is accounted for
+	xMouseMove += event.movementX;
+	yMouseMove += event.movementY;
 };
 
 let contextMenuFunction = (event) => {
