@@ -2233,9 +2233,6 @@ let renderFrame = (gs) => {
 		playerMesh.rotation.x = 0;
 		playerMesh.rotation.y = 0;
 		playerMesh.rotation.z = playerObject.rotation;
-		if (playerObject.rolling) {
-			//playerMesh.rotateY((-2 * Math.PI * playerObject.rollStun) / 45);
-		}
 
 		if (playerObject.defeated) {
 			if (playerObject.team === 1) {
@@ -2268,7 +2265,7 @@ let renderFrame = (gs) => {
 			playerScene.position.set(
 				playerMesh.position.x,
 				playerMesh.position.y,
-				playerMesh.position.z - 0.5,
+				playerMesh.position.z + 0.35,
 			);
 			playerScene.rotation.set(
 				playerMesh.rotation.x,
@@ -2673,7 +2670,7 @@ let gameLogic = (gs) => {
 		let leftStickY = playerObject.gamepadAxes[1];
 		let rightStickX = playerObject.gamepadAxes[2];
 		let rightStickY = playerObject.gamepadAxes[3];
-		// Minimum values so there's no tiny drift
+		// Minimum values so there's no tiny drift (deadzone)
 		if (Math.abs(leftStickX) < 0.1 && Math.abs(leftStickY) < 0.1) {
 			leftStickX = 0;
 			leftStickY = 0;
@@ -3298,13 +3295,41 @@ let gameLogic = (gs) => {
 			}
 		}
 		if (playerObject.rolling) {
-			playerObject.rollStun -= 1;
-			// Apply additional roll movement
-			playerObject.xSpeed += playerObject.xRoll * 0.02;
-			playerObject.ySpeed += playerObject.yRoll * 0.02;
-			if (playerObject.rollStun <= 0) {
+			// Jump from roll
+			if (buttonA && releasedA) {
+				if (playerObject.zPosition === 0 || standingOnAppliance) {
+					// Jump from ground
+					zSpeedChange += 0.35;
+					playerObject.zSpeed = zSpeedChange;
+				} else {
+					// Jump from air roll
+					zSpeedChange += 0.35;
+					playerObject.zSpeed = zSpeedChange;
+				}
+				// Stop rolling
 				playerObject.rolling = false;
 				playerObject.rollStun = 0;
+			} else {
+				playerObject.rollStun -= 1;
+				// Adjust roll angle based on current movement
+				let newRollAngle = Math.atan2(leftStickY, leftStickX);
+				let xRollNew = Math.cos(newRollAngle);
+				let yRollNew = -Math.sin(newRollAngle);
+				playerObject.xRoll =
+					(playerObject.xRoll * (10 - leftStickMagnitude) +
+						xRollNew * leftStickMagnitude) *
+					0.1;
+				playerObject.yRoll =
+					(playerObject.yRoll * (10 - leftStickMagnitude) +
+						yRollNew * leftStickMagnitude) *
+					0.1;
+				// Apply additional roll movement
+				playerObject.xSpeed += playerObject.xRoll * 0.02;
+				playerObject.ySpeed += playerObject.yRoll * 0.02;
+				if (playerObject.rollStun <= 0) {
+					playerObject.rolling = false;
+					playerObject.rollStun = 0;
+				}
 			}
 		}
 		// Other stun timers, for if you get hit, guard an attack, get knocked down, staggered, or are getting back up
